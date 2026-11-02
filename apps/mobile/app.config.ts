@@ -4,14 +4,12 @@
  * Native folders (ios/, android/) are generated from this file by `expo prebuild` and are not
  * checked in. Bluetooth needs a development build (expo-dev-client); it does not run in Expo Go.
  *
- * OWNER TO CONFIRM: the bundle identifier / Android package below is a placeholder.
- *
  * The app's short name (under the icon) is "pi-fig". Icons are drawn by store/scripts/make-icons.sh.
  */
 import type { ConfigContext, ExpoConfig } from "expo/config";
 
-/** Placeholder until the owner picks the final identifier (it can't change after store release). */
-const APP_ID = "com.alexmaghen.piconfigurator";
+/** iOS bundle ID and Android package (chosen 2026-11-02; can't change after a store release). */
+const APP_ID = "com.alexmaghen.pifig";
 
 const BLUETOOTH_REASON =
   "pi-fig uses Bluetooth to find your Raspberry Pi devices nearby and change their settings.";
@@ -27,6 +25,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   userInterfaceStyle: "automatic",
   ios: {
     bundleIdentifier: APP_ID,
+    // The owner's Apple Developer team, so Xcode signs with it automatically.
+    appleTeamId: "4Z3U3P6Q63",
     // Raise for every upload to App Store Connect (TestFlight refuses a repeated build number).
     buildNumber: "1",
     supportsTablet: true,

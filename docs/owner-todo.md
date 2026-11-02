@@ -7,8 +7,8 @@ first implementation is done and tested on the Mac (see "State of the build" at 
 
 1. **First commit.** Done: one initial commit on `main` (2026-11-01). No remote is set up and
    nothing is pushed.
-2. **App ID.** `com.alexmaghen.piconfigurator` is a placeholder in `apps/mobile/app.config.ts`
-   (iOS bundle ID and Android package). It can't change after a store release.
+2. **App ID.** Done: `com.alexmaghen.pifig` (iOS bundle ID and Android package, in
+   `apps/mobile/app.config.ts`). It can't change after a store release.
 3. **Export compliance.** `ITSAppUsesNonExemptEncryption` is set to `false`. The app uses
    standard AES-GCM / SRP only to talk to your own devices, which usually qualifies for the
    exemption, but that's your call for App Store submission.
@@ -28,7 +28,7 @@ first implementation is done and tested on the Mac (see "State of the build" at 
 
 1. **TestFlight.** The app is now "pi-fig", runs on iPhone and iPad, and has its own icon.
    Store icons, screenshots, text and a privacy policy are in `store/` (see `store/README.md`).
-   To upload: pick the final app ID, create the app in App Store Connect, set your team in
+   To upload: create the app in App Store Connect (bundle ID `com.alexmaghen.pifig`), set your team in
    Xcode, then Product → Archive → Distribute App → TestFlight & App Store.
 2. **Android.** Not built yet. Permissions are configured but untested; needs Android Studio /
    an emulator and a phone with BLE.
