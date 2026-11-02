@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Options for uploading an archive to App Store Connect (TestFlight), used by:
+    xcodebuild -exportArchive -archivePath build/pifig.xcarchive \
+      -exportOptionsPlist ExportOptions.plist -exportPath build/export -allowProvisioningUpdates
+  Signing is automatic with the owner's team; Xcode creates the distribution certificate and
+  profile if they don't exist yet.
+-->
+<plist version="1.0">
+<dict>
+	<key>method</key>
+	<string>app-store-connect</string>
+	<key>destination</key>
+	<string>upload</string>
+	<key>teamID</key>
+	<string>4Z3U3P6Q63</string>
+	<key>signingStyle</key>
+	<string>automatic</string>
+	<key>uploadSymbols</key>
+	<true/>
+	<key>manageAppVersionAndBuildNumber</key>
+	<false/>
+</dict>
+</plist>

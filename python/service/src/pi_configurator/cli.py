@@ -56,13 +56,16 @@ def cmd_check(args: argparse.Namespace) -> int:
 MIN_PASSWORD = 8  # same minimum the app asks for when changing the password from the phone
 
 
-def _ask_access(current_name: str) -> tuple[str, str]:
-    """Asks for the Bluetooth name (Enter keeps the current one) and a new password, twice."""
+def _ask_access(current_name: str) -> tuple[str, str | None]:
+    """Asks for the Bluetooth name and the access password. Enter keeps each as it is in the
+    config (password None); a new password is asked for twice."""
     import getpass
 
     name = input(f"Bluetooth name [{current_name}]: ").strip() or current_name
     while True:
-        password = getpass.getpass(f"Access password (at least {MIN_PASSWORD} characters): ")
+        password = getpass.getpass("Access password [enter to keep default]: ")
+        if not password:
+            return name, None
         if len(password) < MIN_PASSWORD:
             print(f"Too short: use at least {MIN_PASSWORD} characters.", file=sys.stderr)
             continue
@@ -106,7 +109,8 @@ def cmd_set_access(args: argparse.Namespace) -> int:
         for issue in err.issues:
             print(f"  {issue}", file=sys.stderr)
         return EXIT_CONFIG_INVALID
-    print(f"{path}: saved (Bluetooth name {name!r}).")
+    kept = "changed" if password is not None else "unchanged"
+    print(f"{path}: saved (Bluetooth name {name!r}, password {kept}).")
     print("If the service is running, restart it to use them:")
     print("  sudo systemctl restart pi-configurator")
     return 0

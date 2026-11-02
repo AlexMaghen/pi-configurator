@@ -12,9 +12,8 @@
 # Safe to run again: it only creates what is missing, reinstalls the Python packages from this
 # checkout, and restarts the service when the config is valid. It never deletes anything.
 #
-# While the config still has the template's placeholder password, it asks for a Bluetooth name
-# and a real password (from the terminal, so it also works under `curl ... | sudo bash`), and it
-# won't start the service with the placeholder.
+# On a first install it asks for the Bluetooth name and access password (from the terminal, so it
+# also works under `curl ... | sudo bash`); Enter keeps the values in the config as they are.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -25,8 +24,6 @@ CONFIG="$ETC/config.json"
 STATE=/var/lib/pi-configurator
 GROUP=pi-configurator
 UNIT=pi-configurator.service
-# The password in config-template/config.json; the service is never started with it.
-PLACEHOLDER_PASSWORD="1234"
 
 config_src="$REPO/config-template/config.json"
 readers=()
@@ -34,7 +31,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --config) config_src="$2"; shift 2 ;;
     --reader) readers+=("$2"); shift 2 ;;
-    -h|--help) sed -n '2,18p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,17p' "$0"; exit 0 ;;
     *) echo "unknown option: $1" >&2; exit 64 ;;
   esac
 done
@@ -80,11 +77,13 @@ install -d -m 0700 -o root -g root "$ETC"
 # Group members need to reach values.json (0640) inside.
 install -d -m 0750 -o root -g "$GROUP" "$STATE"
 
+new_config=0
 if [[ -e "$CONFIG" ]]; then
   echo "keeping existing $CONFIG"
 elif [[ -f "$config_src" ]]; then
   install -m 0600 -o root -g root "$config_src" "$CONFIG"
   echo "installed $CONFIG from $config_src"
+  new_config=1
 else
   echo "no $CONFIG yet and $config_src not found: write one, then run this script again" >&2
 fi
@@ -93,14 +92,7 @@ if [[ -e "$CONFIG" ]]; then
   chmod 0600 "$CONFIG"
 fi
 
-# placeholder_password: true while the config still has the template's password.
-placeholder_password() {
-  [[ -e "$CONFIG" ]] && "$VENV/bin/python" -c \
-    'import json, sys; sys.exit(0 if json.load(open(sys.argv[1]))["access"]["password"] == sys.argv[2] else 1)' \
-    "$CONFIG" "$PLACEHOLDER_PASSWORD" 2>/dev/null
-}
-
-if placeholder_password; then
+if [[ $new_config == 1 ]]; then
   step "Bluetooth name and password"
   # Ask only when someone is watching: the output goes to a terminal (stdin is the script itself
   # under `curl | bash`) and that terminal can be opened for the answers.
@@ -108,7 +100,7 @@ if placeholder_password; then
     echo "The phone app shows this device by its Bluetooth name and unlocks it with this password."
     "$VENV/bin/pi-configurator" set-access "$CONFIG" </dev/tty >/dev/tty || true
   else
-    echo "no terminal to ask on; set them later with: sudo pi-configurator set-access" >&2
+    echo "using the name and password in $CONFIG; change them with: sudo pi-configurator set-access"
   fi
 fi
 
@@ -118,10 +110,7 @@ systemctl daemon-reload
 systemctl enable bluetooth.service NetworkManager.service >/dev/null 2>&1 || true
 systemctl enable "$UNIT"
 
-if placeholder_password; then
-  echo "not starting: the access password is still the placeholder." >&2
-  echo "set it with: sudo pi-configurator set-access && sudo systemctl restart $UNIT" >&2
-elif [[ -e "$CONFIG" ]] && "$VENV/bin/pi-configurator" check "$CONFIG"; then
+if [[ -e "$CONFIG" ]] && "$VENV/bin/pi-configurator" check "$CONFIG"; then
   systemctl restart "$UNIT"
   echo "started; follow it with: journalctl -u pi-configurator -f"
 else

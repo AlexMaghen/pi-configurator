@@ -171,3 +171,18 @@ def test_set_access_refuses_bad_values(tmp_path: Path, monkeypatch: pytest.Monke
     assert main(["set-access", str(path), "--password-stdin"]) == 2
     assert main(["set-access", str(path), "--name", "x" * 30]) == 2  # over 29 bytes
     assert path.read_bytes() == before
+
+
+def test_set_access_enter_keeps_both(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    path = _copy_template(tmp_path)
+
+    def press_enter(_prompt: str) -> str:
+        return ""
+
+    monkeypatch.setattr("builtins.input", press_enter)
+    monkeypatch.setattr("getpass.getpass", press_enter)
+    assert main(["set-access", str(path)]) == 0
+    data = json.loads(path.read_text())
+    template = json.loads(CONFIG_TEMPLATE.read_text())
+    assert data["bluetooth"]["name"] == template["bluetooth"]["name"]
+    assert data["access"]["password"] == template["access"]["password"]

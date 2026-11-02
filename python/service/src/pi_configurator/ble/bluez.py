@@ -25,6 +25,7 @@ from dbus_fast.service import ServiceInterface, dbus_method, dbus_property
 
 from ..core.service import Service
 from ..protocol.gatt import INFO_UUID, RPC_IN_UUID, RPC_OUT_UUID, SERVICE_UUID
+from . import rfkill
 from .bridge import BleBridge, ChannelBusy
 
 log = logging.getLogger(__name__)
@@ -285,11 +286,46 @@ class BluezServer:
             ["org.bluez.Adapter1", prop, Variant(signature, value)],
         )
 
+    async def _powered(self) -> bool:
+        (value,) = await self._call(
+            self._adapter,
+            "org.freedesktop.DBus.Properties",
+            "Get",
+            "ss",
+            ["org.bluez.Adapter1", "Powered"],
+        )
+        return bool(value.value)
+
+    async def _power_on(self, attempts: int = 5) -> None:
+        """Turns the adapter on, first clearing an rfkill soft block if BlueZ refuses."""
+        if await self._powered():
+            return
+        last: Exception | None = None
+        for attempt in range(attempts):
+            try:
+                await self._set_adapter("Powered", "b", True)
+                return
+            except RuntimeError as err:  # org.bluez.Error.Failed while rfkill-blocked
+                last = err
+            if attempt == 0:
+                unblocked = rfkill.unblock_bluetooth()
+                if unblocked:
+                    log.warning("Bluetooth was switched off (rfkill); turned it back on")
+            await asyncio.sleep(1)  # the kernel and BlueZ take a moment after an unblock
+        blocks = rfkill.bluetooth_blocks()
+        if any(b.hard for b in blocks):
+            reason = "the Bluetooth radio is hard-blocked (a hardware switch or firmware)"
+        elif any(b.soft for b in blocks):
+            reason = "the Bluetooth radio is still soft-blocked (see `rfkill list bluetooth`)"
+        else:
+            reason = "check `bluetoothctl show` and `journalctl -u bluetooth`"
+        raise RuntimeError(f"couldn't turn Bluetooth on: {reason} ({last})")
+
     async def start(self) -> None:
         self._bus = bus = await MessageBus(bus_type=BusType.SYSTEM).connect()
         self._adapter = await self._find_adapter()
         log.info("using Bluetooth adapter %s", self._adapter)
-        await self._set_adapter("Powered", "b", True)
+        await self._power_on()
         # The GAP device name; iOS shows it (and caches it) once connected.
         await self._set_adapter("Alias", "s", self._service.config.name)
 

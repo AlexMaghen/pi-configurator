@@ -27,9 +27,9 @@ The installer:
 2. downloads pi-configurator to `/opt/pi-configurator` and sets it up as the
    `pi-configurator` service, started now and at every boot;
 3. copies the config template to `/etc/pi-configurator/config.json`;
-4. asks for the **Bluetooth name** the phone will show and an **access password** (at least 8
-   characters). The template's password, `1234`, is only a placeholder: the service won't start
-   until a real password is set.
+4. asks for the **Bluetooth name** the phone will show and the **access password** the app
+   unlocks it with. Press Enter to keep each as it is in the config (the template's are
+   `BallsPi` and `1234`); a new password needs at least 8 characters.
 
 When it finishes, the Pi is advertising over Bluetooth and pi-fig can find it.
 

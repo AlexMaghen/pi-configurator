@@ -17,9 +17,9 @@ git clone https://github.com/AlexMaghen/pi-configurator.git ~/pi-configurator &&
 sudo ./deploy/install.sh --reader pi
 ```
 
-On a first install the script asks for the Bluetooth name and an access password
-(`pi-configurator set-access`), and it doesn't start the service while the config still has the
-template's placeholder password (`1234`). Then:
+On a first install the script asks for the Bluetooth name and access password
+(`pi-configurator set-access`); Enter keeps the values in the config (the template's password is
+`1234`). With no terminal (an automated setup) it uses the config as it is. Then:
 
 ```sh
 sudo nano /etc/pi-configurator/config.json        # the settings the phone may change

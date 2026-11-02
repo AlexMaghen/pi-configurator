@@ -4,8 +4,9 @@
 #   ./deploy/test/run.sh
 #
 # Packs the working tree (including uncommitted changes) as GitHub would serve it, then runs
-# in-container.sh: a first install with no terminal, a first install answering the prompts, and
-# an update. Prints a summary; the full log is in deploy/test/out/install.log.
+# in-container.sh: a first install with no terminal, a first install answering the prompts, one
+# pressing Enter to keep the template's name and password, and an update. Prints a summary; the
+# full log is in deploy/test/out/install.log.
 #
 # Needs Docker. On Apple Silicon the container is arm64, like a 64-bit Pi. It can't run systemd
 # or Bluetooth, so it checks the install steps, not the service on hardware.
@@ -25,8 +26,14 @@ tree="$(GIT_INDEX_FILE="$index" git -C "$ROOT" write-tree)"
 git -C "$ROOT" archive --format=tar.gz --prefix=pi-configurator-main/ "$tree" >"$OUT/main.tar.gz"
 cp "$ROOT/deploy/test/in-container.sh" "$OUT/"
 
+if ! docker info >/dev/null 2>&1; then
+  echo "starting Docker..."
+  open -a Docker
+  for _ in $(seq 1 60); do docker info >/dev/null 2>&1 && break; sleep 3; done
+fi
+
 docker run --rm -v "$OUT:/test" debian:trixie bash /test/in-container.sh >"$OUT/install.log" 2>&1
 
 # Summary: the test's own lines, without apt's progress output.
 tr '\r' '\n' <"$OUT/install.log" | sed -n '/################ RUN 1/,$p' |
-  grep -E '^(####|==>|exit=|--- |systemctl |[A-Za-z].* \| |installed |keeping |not starting|started|no terminal|Too short|/etc/|pi-configurator|client ok)'
+  grep -E '^(####|==>|exit=|--- |systemctl |[A-Za-z].* \| |installed |keeping |not starting|started|using the name|Too short|/etc/|pi-configurator|client ok)'

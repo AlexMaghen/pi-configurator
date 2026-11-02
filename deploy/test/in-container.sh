@@ -42,6 +42,25 @@ puts "exit=[lindex $result 3]"
 X
 echo "--- config:"; pw
 echo "--- systemctl calls:"; cat /test/systemctl.log
+cp /etc/pi-configurator/config.json /test/kitchen.json
+
+echo "################ RUN 2b: first install, pressing Enter to keep the config's name and password"
+: > /test/systemctl.log
+rm /etc/pi-configurator/config.json  # back to a first install
+expect <<'X'
+set timeout 600
+spawn bash /tmp/get.sh
+expect "Bluetooth name"
+send "\r"
+expect "enter to keep default"
+send "\r"
+expect eof
+catch wait result
+puts "exit=[lindex $result 3]"
+X
+echo "--- config:"; pw
+echo "--- systemctl calls:"; cat /test/systemctl.log
+cp /test/kitchen.json /etc/pi-configurator/config.json  # RUN 3 updates RUN 2's config
 
 echo "################ RUN 3: update (config kept, no prompt)"
 : > /test/systemctl.log
