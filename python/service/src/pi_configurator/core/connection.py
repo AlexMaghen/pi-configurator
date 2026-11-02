@@ -52,8 +52,12 @@ class Connection:
         sink: FrameSink,
         frame_size: int = MIN_FRAME_SIZE,
         name: str = "connection",
+        hang_up: Callable[[], None] | None = None,
     ) -> None:
         self.service = service
+        #: Asks the transport to drop this phone (e.g. a Bluetooth disconnect); set by the
+        #: transport, None in tests and transports that can't.
+        self.hang_up = hang_up
         self.name = name
         self.frame_size = frame_size
         self._sink = sink
@@ -62,6 +66,8 @@ class Connection:
         self._session: SessionChannels | None = None
         self.pending_srp: SrpServer | None = None
         self.last_activity = self._clock()
+        #: When this connection last became locked: on connecting, and whenever a session ends.
+        self.locked_since = self._clock()
         self._tasks: set[asyncio.Task[None]] = set()
         self.closed = False
 
@@ -84,6 +90,7 @@ class Connection:
         self.send(status_event("session.ending", message))
         self._session = None
         self.pending_srp = None
+        self.locked_since = self._clock()
         log.info("%s: session ended: %s", self.name, message)
 
     def drop_session(self) -> None:
@@ -91,9 +98,14 @@ class Connection:
         already have thrown its keys away, so an encrypted notice would only confuse it)."""
         self._session = None
         self.pending_srp = None
+        self.locked_since = self._clock()
 
     def idle_for(self) -> float:
         return self._clock() - self.last_activity
+
+    def locked_for(self) -> float:
+        """Seconds without an unlocked session (0 while unlocked)."""
+        return 0.0 if self.unlocked else self._clock() - self.locked_since
 
     # -- input ---------------------------------------------------------------------------------
 

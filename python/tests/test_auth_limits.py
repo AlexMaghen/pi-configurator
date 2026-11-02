@@ -1,7 +1,7 @@
-"""Wrong-password backoff (shared across connections) and the idle timeout."""
+"""Wrong-password backoff (shared across connections), the idle timeout and the unlock timeout."""
 
 from pi_configurator.core.backoff import AuthBackoff
-from pi_configurator.protocol.gatt import SESSION_IDLE_TIMEOUT_S
+from pi_configurator.protocol.gatt import SESSION_IDLE_TIMEOUT_S, UNLOCK_TIMEOUT_S
 
 from .conftest import PASSWORD, World
 
@@ -66,3 +66,39 @@ async def test_idle_timeout(world: World) -> None:
     assert phone.events[-1]["kind"] == "session.ending"
     assert phone.events[-1]["_encrypted"] is True
     assert (await phone.error("settings.get", {}))["code"] == "unauthenticated"
+
+
+async def test_unlock_timeout_disconnects_a_phone_that_never_unlocks(world: World) -> None:
+    idle = world.phone()
+    world.clock.now += UNLOCK_TIMEOUT_S - 1
+    world.service.sweep_idle()
+    assert idle.conn in world.service.connections
+    world.clock.now += 2
+    world.service.sweep_idle()
+    assert idle.conn not in world.service.connections and idle.conn.closed
+
+
+async def test_unlock_timeout_uses_the_transport_hang_up(world: World) -> None:
+    hung_up: list[str] = []
+    conn = world.service.connect(lambda frames: None, hang_up=lambda: hung_up.append("x"))
+    world.clock.now += UNLOCK_TIMEOUT_S + 1
+    world.service.sweep_idle()
+    assert hung_up == ["x"]  # the transport frees the channel and calls disconnect itself
+    world.service.disconnect(conn)
+
+
+async def test_unlock_timeout_restarts_when_a_session_ends(world: World) -> None:
+    phone = await world.unlocked_phone()
+    world.clock.now += UNLOCK_TIMEOUT_S * 3  # unlocked: never dropped for being locked
+    await phone.result("settings.get", {"keys": ["ENABLED"]})
+    world.service.sweep_idle()
+    assert phone.conn.unlocked
+    world.clock.now += SESSION_IDLE_TIMEOUT_S + 1
+    world.service.sweep_idle()  # session ends; the phone gets a fresh unlock window
+    assert not phone.conn.unlocked and phone.conn in world.service.connections
+    world.clock.now += UNLOCK_TIMEOUT_S - 1
+    world.service.sweep_idle()
+    assert phone.conn in world.service.connections
+    world.clock.now += 2
+    world.service.sweep_idle()
+    assert phone.conn not in world.service.connections

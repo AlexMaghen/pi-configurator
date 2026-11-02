@@ -42,7 +42,7 @@ Edited by hand or by a device's install script, not by the phone (v1).
     "name": "BallsPi"
   },
   "access": {
-    "password": "change-me-1234"
+    "password": "1234"
   },
   "permissions": {
     "allowReboot": false,
@@ -229,7 +229,9 @@ ESP32 provisioning.
 2. Both sides end up with the same session key only if the password was right; each side proves it
    to the other, so the phone also knows it's talking to the real device.
 3. Every later message is encrypted with AES-256-GCM using that key, with a counter as the nonce.
-4. Sessions end on disconnect or after 10 minutes idle.
+4. Sessions end on disconnect or after 10 minutes idle. The Pi serves one phone at a time, so a
+   phone connected without an unlocked session for 2 minutes (`UNLOCK_TIMEOUT_S`) is
+   disconnected; a device that never unlocks can't keep everyone else out.
 5. Wrong passwords are rate-limited: after 5 failures, wait 30 s, doubling to a 15-minute cap.
 
 **Where the password lives.** The config holds it as plain text (owner's decision), protected by

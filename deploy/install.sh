@@ -26,7 +26,7 @@ STATE=/var/lib/pi-configurator
 GROUP=pi-configurator
 UNIT=pi-configurator.service
 # The password in config-template/config.json; the service is never started with it.
-PLACEHOLDER_PASSWORD="change-me-1234"
+PLACEHOLDER_PASSWORD="1234"
 
 config_src="$REPO/config-template/config.json"
 readers=()

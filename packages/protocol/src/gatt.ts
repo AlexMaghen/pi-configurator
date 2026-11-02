@@ -16,5 +16,12 @@ export const GATT = {
 /** How long an unlocked session may sit idle before the Pi closes it. */
 export const SESSION_IDLE_TIMEOUT_S = 600;
 
+/**
+ * How long a phone may stay connected without an unlocked session (from connecting, or from its
+ * session ending) before the Pi disconnects it. The Pi serves one phone at a time, so this stops
+ * a device that never unlocks from keeping everyone else out.
+ */
+export const UNLOCK_TIMEOUT_S = 120;
+
 /** Wrong-password backoff: free attempts, then a wait that doubles up to the cap. */
 export const AUTH_BACKOFF = { freeAttempts: 5, firstWaitS: 30, maxWaitS: 900 } as const;

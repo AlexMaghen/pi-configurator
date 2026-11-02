@@ -9,6 +9,7 @@ from typing import Any
 import pytest
 from pi_configurator.ble.bridge import BleBridge, ChannelBusy
 from pi_configurator.protocol.framing import FrameAssembler, split_message
+from pi_configurator.protocol.gatt import UNLOCK_TIMEOUT_S
 from pi_configurator.system.commands import HOSTNAME_RE, Hostname, update_hosts_text
 from pi_configurator.system.interfaces import AdapterError, WifiNetwork
 from pi_configurator.system.networkmanager import (
@@ -180,3 +181,19 @@ async def test_gatt_handlers(world: World) -> None:
     rpc_out.notify(b"frame-2")
     await asyncio.sleep(0.01)
     assert rpc_out._value == b"frame-2"  # pyright: ignore[reportPrivateUsage]
+
+
+async def test_bridge_hangs_up_on_a_phone_that_never_unlocks(world: World) -> None:
+    dropped: list[str] = []
+    bridge = BleBridge(world.service, lambda frame: None, lambda d: True, dropped.append)
+    bridge.write("/org/bluez/hci0/dev_A", b"\x03\x00\x00\x00\x00\x00", mtu=185)
+    with pytest.raises(ChannelBusy):
+        bridge.write("/org/bluez/hci0/dev_B", b"\x03\x00\x00\x00\x00\x00", mtu=185)
+
+    world.clock.now += UNLOCK_TIMEOUT_S + 1
+    world.service.sweep_idle()
+    assert dropped == ["/org/bluez/hci0/dev_A"]
+    assert bridge.owner is None and not world.service.connections
+
+    bridge.write("/org/bluez/hci0/dev_B", b"\x03\x00\x00\x00\x00\x00", mtu=185)
+    assert bridge.owner == "/org/bluez/hci0/dev_B"

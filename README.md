@@ -28,7 +28,8 @@ The installer:
    `pi-configurator` service, started now and at every boot;
 3. copies the config template to `/etc/pi-configurator/config.json`;
 4. asks for the **Bluetooth name** the phone will show and an **access password** (at least 8
-   characters). The service won't start until a real password is set.
+   characters). The template's password, `1234`, is only a placeholder: the service won't start
+   until a real password is set.
 
 When it finishes, the Pi is advertising over Bluetooth and pi-fig can find it.
 

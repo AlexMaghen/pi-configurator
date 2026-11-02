@@ -196,7 +196,10 @@ class BluezServer:
         self._adapter = ""
         self._connected: dict[str, bool] = {}
         self._rpc_out = RpcOutCharacteristic()
-        self.bridge = BleBridge(service, self._rpc_out.notify, self._device_connected)
+        self.bridge = BleBridge(
+            service, self._rpc_out.notify, self._device_connected, self._drop_device
+        )
+        self._background: set[asyncio.Task[None]] = set()
         self._advert = Advertisement(service.config.name)
 
     async def _call(
@@ -236,6 +239,20 @@ class BluezServer:
 
     def _device_connected(self, device: str) -> bool:
         return self._connected.get(device, True)
+
+    def _drop_device(self, device: str) -> None:
+        """Disconnects a phone the core hung up on (Device1.Disconnect)."""
+
+        async def drop() -> None:
+            try:
+                # VERIFY ON PI: a peripheral asking BlueZ to drop a central it didn't connect to.
+                await self._call(device, "org.bluez.Device1", "Disconnect")
+            except Exception as err:  # it may already be gone
+                log.info("couldn't disconnect %s: %s", device, err)
+
+        task = asyncio.create_task(drop())
+        self._background.add(task)
+        task.add_done_callback(self._background.discard)
 
     def _on_message(self, msg: Message) -> bool:
         """Follows Device1.Connected so a phone that goes away releases the channel."""

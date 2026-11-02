@@ -19,7 +19,7 @@ sudo ./deploy/install.sh --reader pi
 
 On a first install the script asks for the Bluetooth name and an access password
 (`pi-configurator set-access`), and it doesn't start the service while the config still has the
-template's placeholder password. Then:
+template's placeholder password (`1234`). Then:
 
 ```sh
 sudo nano /etc/pi-configurator/config.json        # the settings the phone may change

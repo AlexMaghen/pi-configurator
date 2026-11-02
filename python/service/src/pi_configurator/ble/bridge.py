@@ -6,6 +6,10 @@ another and break its session, so v1 serves **one phone at a time**: the first d
 writes to rpc-in owns the channel until it disconnects, and writes from any other device are
 refused (the phone sees an ATT error and can say "busy"). The core itself handles any number
 of connections; this restriction lives only here.
+
+So that a device that connects and never unlocks can't keep everyone out, the core hangs up on
+a connection that has had no session for UNLOCK_TIMEOUT_S: the bridge then frees the channel and
+asks BlueZ to disconnect the device.
 """
 
 import logging
@@ -29,10 +33,12 @@ class BleBridge:
         service: Service,
         notify: Callable[[bytes], None],
         is_connected: Callable[[str], bool] | None = None,
+        drop_device: Callable[[str], None] | None = None,
     ) -> None:
         self._service = service
         self._notify = notify
         self._is_connected = is_connected
+        self._drop_device = drop_device
         self.owner: str | None = None
         self._conn: Connection | None = None
 
@@ -51,7 +57,10 @@ class BleBridge:
         if self._conn is None or self.owner is None:
             self.owner = device
             self._conn = self._service.connect(
-                self._send_frames, frame_size_for_mtu(mtu), name=device.rsplit("/", 1)[-1]
+                self._send_frames,
+                frame_size_for_mtu(mtu),
+                name=device.rsplit("/", 1)[-1],
+                hang_up=lambda: self._hang_up(device),
             )
             log.info("%s connected (MTU %s)", device, mtu)
         elif mtu is not None:
@@ -65,6 +74,14 @@ class BleBridge:
         self._service.disconnect(self._conn)
         self._conn = None
         self.owner = None
+
+    def _hang_up(self, device: str) -> None:
+        """The core gave up on `device` (no unlock in time): free the channel, then drop it."""
+        if device != self.owner:
+            return
+        self.disconnected(device)
+        if self._drop_device is not None:
+            self._drop_device(device)
 
     def _send_frames(self, frames: list[bytes]) -> None:
         for frame in frames:

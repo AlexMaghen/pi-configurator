@@ -31,7 +31,7 @@ from ..protocol.config import (
     WifiField,
     handler_of,
 )
-from ..protocol.gatt import SESSION_IDLE_TIMEOUT_S
+from ..protocol.gatt import SESSION_IDLE_TIMEOUT_S, UNLOCK_TIMEOUT_S
 from ..protocol.jsonutil import Json, JsonObject, b64decode, b64encode, utf8_length
 from ..protocol.rpc import (
     AuthFinishParams,
@@ -65,7 +65,7 @@ UNSET_HOSTNAMES: Final = frozenset({"", "localhost", "raspberrypi"})
 #: Time zones that count as "nothing set" for first-start defaults.
 UNSET_TIMEZONES: Final = frozenset({"", "UTC", "Etc/UTC", "Universal", "Etc/Universal"})
 #: The example password from the docs; the service warns while it is still in use.
-EXAMPLE_PASSWORDS: Final = frozenset({"change-me-1234"})
+EXAMPLE_PASSWORDS: Final = frozenset({"1234", "change-me-1234"})
 
 # Order system handlers are applied in a save: quick ones first, Wi-Fi (slow, may drop the
 # phone's link when the radio retunes) last.
@@ -136,9 +136,13 @@ class Service:
     # -- connections ---------------------------------------------------------------------------
 
     def connect(
-        self, sink: FrameSink, frame_size: int = 20, name: str = "connection"
+        self,
+        sink: FrameSink,
+        frame_size: int = 20,
+        name: str = "connection",
+        hang_up: Callable[[], None] | None = None,
     ) -> Connection:
-        conn = Connection(self, sink, frame_size, name)
+        conn = Connection(self, sink, frame_size, name, hang_up)
         self.connections.add(conn)
         return conn
 
@@ -150,10 +154,17 @@ class Service:
         return DeviceInfo(name=self.config.name, service_version=__version__, model=self.model)
 
     def sweep_idle(self) -> None:
-        """Ends sessions idle for longer than SESSION_IDLE_TIMEOUT_S."""
+        """Ends sessions idle for longer than SESSION_IDLE_TIMEOUT_S, and disconnects phones that
+        have been connected without a session for longer than UNLOCK_TIMEOUT_S."""
         for conn in list(self.connections):
             if conn.unlocked and conn.idle_for() > SESSION_IDLE_TIMEOUT_S:
                 conn.end_session("Locked after 10 minutes without activity")
+            elif not conn.unlocked and conn.locked_for() > UNLOCK_TIMEOUT_S:
+                log.info("%s: not unlocked within %d s, disconnecting", conn.name, UNLOCK_TIMEOUT_S)
+                if conn.hang_up is not None:
+                    conn.hang_up()
+                else:
+                    self.disconnect(conn)
 
     async def run_idle_sweeper(self, interval_s: float = 15) -> None:
         while True:

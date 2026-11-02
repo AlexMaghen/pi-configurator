@@ -4,7 +4,7 @@ To try every screen:
 1. Open pi-fig. On the Devices screen, tap the sliders button at the top right (Preferences).
 2. Turn on "Show demo device" and go back.
 3. Tap "BallsPi" (marked Demo).
-4. Enter the password: change-me-1234
+4. Enter the password: 1234
 5. Edit any setting and tap Save. The Wi-Fi network row opens a list of networks; the chip button at the top right opens the device menu (Activity, Reboot, Change password, Rename).
 
 No account or sign-in is needed. The app has no server and makes no internet connections. Bluetooth is used only to find and talk to nearby Raspberry Pi devices.

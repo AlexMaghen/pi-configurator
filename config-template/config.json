@@ -4,7 +4,7 @@
     "name": "BallsPi"
   },
   "access": {
-    "password": "change-me-1234"
+    "password": "1234"
   },
   "permissions": {
     "allowReboot": true,
