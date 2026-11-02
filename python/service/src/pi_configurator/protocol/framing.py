@@ -16,6 +16,9 @@ FLAG_FIRST: Final = 0x01
 FLAG_LAST: Final = 0x02
 FLAG_ENCRYPTED: Final = 0x04
 MIN_FRAME_SIZE: Final = 20
+#: The largest attribute value Bluetooth allows (ATT), so the largest frame. BlueZ cuts anything
+#: longer, and an iPhone negotiates MTU 517, which would otherwise give 514-byte frames.
+MAX_FRAME_SIZE: Final = 512
 MAX_MESSAGE_BYTES: Final = 256 * 1024
 
 _FIRST_HEADER = 6
@@ -33,15 +36,17 @@ class Message:
 
 
 def frame_size_for_mtu(mtu: int | None) -> int:
-    """Frame size for a negotiated ATT MTU (MTU - 3), never below the 20-byte minimum."""
+    """Frame size for a negotiated ATT MTU: MTU - 3, kept between 20 and 512 bytes."""
     if mtu is None:
         return MIN_FRAME_SIZE
-    return max(MIN_FRAME_SIZE, mtu - 3)
+    return min(MAX_FRAME_SIZE, max(MIN_FRAME_SIZE, mtu - 3))
 
 
 def split_message(payload: bytes, encrypted: bool, frame_size: int) -> list[bytes]:
     if frame_size < MIN_FRAME_SIZE:
         raise FramingError(f"frame size must be at least {MIN_FRAME_SIZE}")
+    if frame_size > MAX_FRAME_SIZE:
+        raise FramingError(f"frame size must be at most {MAX_FRAME_SIZE}")
     if len(payload) > MAX_MESSAGE_BYTES:
         raise FramingError("message too large")
     frames: list[bytes] = []

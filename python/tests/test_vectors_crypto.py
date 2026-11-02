@@ -226,8 +226,8 @@ def test_framing_errors_reset() -> None:
 
 
 def test_frame_size_for_mtu() -> None:
-    assert frame_size_for_mtu(None) == 20
-    assert frame_size_for_mtu(23) == 20
-    assert frame_size_for_mtu(10) == 20
-    assert frame_size_for_mtu(185) == 182
-    assert frame_size_for_mtu(517) == 514
+    for case in FRAMING["frameSizeForMtu"]:
+        assert frame_size_for_mtu(case["mtu"]) == case["frameSize"], case
+    assert frame_size_for_mtu(517) == 512  # an iPhone's MTU: capped at the attribute limit
+    with pytest.raises(FramingError):
+        split_message(b"x", False, 513)

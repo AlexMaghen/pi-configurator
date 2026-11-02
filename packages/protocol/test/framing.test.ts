@@ -1,10 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { FrameAssembler, FramingError, splitMessage } from "../src/framing";
+import { FrameAssembler, FramingError, MAX_FRAME_SIZE, frameSizeForMtu, splitMessage } from "../src/framing";
 import { bytesToHex, hexToBytes } from "../src/bytes";
 import { vector } from "./helpers";
 
 describe("framing", () => {
-  const { cases } = vector<{ cases: any[] }>("framing.json");
+  const { cases, frameSizeForMtu: mtus } = vector<{ cases: any[]; frameSizeForMtu: any[] }>("framing.json");
+
+  it("sizes frames from the MTU, at most the 512-byte attribute limit", () => {
+    for (const { mtu, frameSize } of mtus) expect(frameSizeForMtu(mtu ?? undefined)).toBe(frameSize);
+    expect(frameSizeForMtu(517)).toBe(MAX_FRAME_SIZE);
+    expect(() => splitMessage(new Uint8Array(10), false, 513)).toThrow(FramingError);
+  });
 
   it.each(cases.map((c: any) => [c.name, c] as [string, any]))("%s splits and joins", (_name, c: any) => {
     const frames = splitMessage(hexToBytes(c.payload), c.encrypted, c.frameSize);

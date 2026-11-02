@@ -16,7 +16,7 @@ import {
   AUTH_BACKOFF,
   FrameAssembler,
   MAX_BLUETOOTH_NAME_BYTES,
-  MIN_FRAME_SIZE,
+  frameSizeForMtu,
   Methods,
   PROTOCOL_VERSION,
   SESSION_IDLE_TIMEOUT_S,
@@ -442,7 +442,7 @@ class DemoConnection implements GattConnection {
   ) {}
 
   private get frameSize(): number {
-    return Math.max(MIN_FRAME_SIZE, this.mtu - 3);
+    return frameSizeForMtu(this.mtu);
   }
 
   async readInfo(): Promise<Uint8Array> {

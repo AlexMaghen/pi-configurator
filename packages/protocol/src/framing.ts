@@ -10,13 +10,17 @@
  *   rest        payload bytes
  *
  * A one-frame message has FIRST and LAST both set. ENCRYPTED is the same on every frame of a
- * message. The frame size is the negotiated ATT MTU minus 3; 20 bytes is the smallest allowed.
+ * message. The frame size is the negotiated ATT MTU minus 3, at least 20 and at most 512 bytes:
+ * Bluetooth caps an attribute value at 512 bytes whatever the MTU, and BlueZ cuts anything longer
+ * (an iPhone negotiates MTU 517, which would otherwise give 514-byte frames).
  */
 
 export const FLAG_FIRST = 0x01;
 export const FLAG_LAST = 0x02;
 export const FLAG_ENCRYPTED = 0x04;
 export const MIN_FRAME_SIZE = 20;
+/** The largest attribute value Bluetooth allows (ATT), so the largest frame. */
+export const MAX_FRAME_SIZE = 512;
 export const MAX_MESSAGE_BYTES = 256 * 1024;
 
 const FIRST_HEADER = 6;
@@ -29,8 +33,15 @@ export interface Message {
   encrypted: boolean;
 }
 
+/** Frame size for a negotiated ATT MTU: MTU - 3, kept between 20 and 512 bytes. */
+export function frameSizeForMtu(mtu: number | undefined): number {
+  if (mtu === undefined) return MIN_FRAME_SIZE;
+  return Math.min(MAX_FRAME_SIZE, Math.max(MIN_FRAME_SIZE, mtu - 3));
+}
+
 export function splitMessage(payload: Uint8Array, encrypted: boolean, frameSize: number): Uint8Array[] {
   if (frameSize < MIN_FRAME_SIZE) throw new FramingError(`frame size must be at least ${MIN_FRAME_SIZE}`);
+  if (frameSize > MAX_FRAME_SIZE) throw new FramingError(`frame size must be at most ${MAX_FRAME_SIZE}`);
   if (payload.length > MAX_MESSAGE_BYTES) throw new FramingError("message too large");
   const frames: Uint8Array[] = [];
   let offset = 0;

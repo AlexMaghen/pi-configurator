@@ -20,7 +20,7 @@ import {
   computeX,
 } from "./srp";
 import { INFO_PHONE_TO_PI, INFO_PI_TO_PHONE, deriveKey, phoneSession, piSession } from "./session";
-import { splitMessage } from "./framing";
+import { frameSizeForMtu, splitMessage } from "./framing";
 import { bytesToBigInt } from "./bytes";
 
 const json = (value: unknown) => JSON.stringify(value, null, 2) + "\n";
@@ -153,9 +153,19 @@ function framingVectors() {
       encrypted: true,
       frameSize: 64,
     },
+    {
+      name: "1,200 bytes at the largest frame size",
+      payload: concatBytes(...Array.from({ length: 1200 }, (_, i) => new Uint8Array([(i * 7) & 0xff]))),
+      encrypted: true,
+      frameSize: 512,
+    },
   ];
+  // MTUs seen in practice: none (unknown), the BLE minimum, below it, iOS's usual 185, the
+  // largest frame exactly, and an iPhone's 517 (capped at the 512-byte attribute limit).
+  const mtus = [null, 23, 10, 185, 515, 517];
   return {
     description: "Frame layout in packages/protocol/src/framing.ts. Hex strings.",
+    frameSizeForMtu: mtus.map((mtu) => ({ mtu, frameSize: frameSizeForMtu(mtu ?? undefined) })),
     cases: cases.map((c) => ({
       name: c.name,
       encrypted: c.encrypted,

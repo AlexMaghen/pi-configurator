@@ -20,7 +20,7 @@
 import {
   DeviceInfo,
   FrameAssembler,
-  MIN_FRAME_SIZE,
+  frameSizeForMtu,
   Methods,
   Outgoing,
   PROTOCOL_VERSION,
@@ -100,7 +100,7 @@ export class DeviceLink {
     readonly info: DeviceInfo,
     private readonly options: DeviceLinkOptions,
   ) {
-    this.frameSize = Math.max(MIN_FRAME_SIZE, connection.mtu - 3);
+    this.frameSize = frameSizeForMtu(connection.mtu);
     this.now = options.now ?? Date.now;
     this.unsubscribers.push(
       connection.onFrame((frame) => this.receiveFrame(frame)),
