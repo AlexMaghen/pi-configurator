@@ -15,7 +15,7 @@ from pi_configurator.protocol.js_regex import js_test, translate
 from pi_configurator.protocol.jsonutil import JsonObject, js_length
 from pi_configurator.protocol.values import describe_field, validate_value
 
-from .vectors import EXAMPLES, load_vector
+from .vectors import CONFIG_TEMPLATE, load_vector
 
 CONFIG = load_vector("config-cases.json")
 VALUES = load_vector("value-cases.json")
@@ -58,7 +58,7 @@ def test_value_cases(case: dict[str, Any]) -> None:
 
 
 def test_example_config_is_valid() -> None:
-    config = load_config_file(EXAMPLES / "ballspi" / "config.json")
+    config = load_config_file(CONFIG_TEMPLATE)
     assert config.name == "BallsPi"
     assert config.permissions.allow_reboot
 

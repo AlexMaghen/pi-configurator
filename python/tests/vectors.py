@@ -7,7 +7,7 @@ from typing import Any, cast
 PROTOCOL = Path(__file__).resolve().parents[2] / "packages" / "protocol"
 VECTORS = PROTOCOL / "test-vectors"
 SCHEMAS = PROTOCOL / "json-schema"
-EXAMPLES = Path(__file__).resolve().parents[2] / "examples"
+CONFIG_TEMPLATE = Path(__file__).resolve().parents[2] / "config-template" / "config.json"
 
 
 def load_vector(name: str) -> dict[str, Any]:

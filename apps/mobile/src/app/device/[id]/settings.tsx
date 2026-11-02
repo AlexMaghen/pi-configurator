@@ -62,7 +62,7 @@ export default function SettingsScreen() {
           title: info?.name ?? "Settings",
           headerRight: () => (
             <HeaderButton
-              icon="more"
+              icon="cpu"
               label="Device menu"
               onPress={() => router.push({ pathname: "/device/[id]/menu", params: { id } })}
             />

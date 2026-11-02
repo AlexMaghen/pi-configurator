@@ -4,7 +4,8 @@
 #   sudo ./deploy/install.sh [--config path/to/config.json] [--reader USER]...
 #
 #   --config FILE   copy FILE to /etc/pi-configurator/config.json, ONLY if that file doesn't
-#                   exist yet (an existing config is never replaced)
+#                   exist yet (an existing config is never replaced). Defaults to the template,
+#                   config-template/config.json
 #   --reader USER   add USER to the pi-configurator group so its programs can read the store
 #                   (/var/lib/pi-configurator/values.json); repeatable
 #
@@ -21,7 +22,7 @@ STATE=/var/lib/pi-configurator
 GROUP=pi-configurator
 UNIT=pi-configurator.service
 
-config_src=""
+config_src="$REPO/config-template/config.json"
 readers=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -74,11 +75,11 @@ install -d -m 0750 -o root -g "$GROUP" "$STATE"
 
 if [[ -e "$CONFIG" ]]; then
   echo "keeping existing $CONFIG"
-elif [[ -n "$config_src" ]]; then
+elif [[ -f "$config_src" ]]; then
   install -m 0600 -o root -g root "$config_src" "$CONFIG"
   echo "installed $CONFIG from $config_src"
 else
-  echo "no $CONFIG yet: write one (see examples/), then run this script again" >&2
+  echo "no $CONFIG yet and $config_src not found: write one, then run this script again" >&2
 fi
 if [[ -e "$CONFIG" ]]; then
   chown root:root "$CONFIG"

@@ -1,6 +1,6 @@
 /**
  * The settings form logic: grouping, parsing typed text, validation and change detection.
- * Real fields come from examples/ballspi/config.json; a few synthetic fields cover cases the
+ * Real fields come from config-template/config.json; a few synthetic fields cover cases the
  * example doesn't have (thousands in limits, secrets, ungrouped fields).
  */
 import { describe, expect, it } from "vitest";

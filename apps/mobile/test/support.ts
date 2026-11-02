@@ -19,7 +19,7 @@ export const NO_DELAYS = { frame: 0, wifiScan: 0, wifiJoin: 0, restart: 0, reboo
 
 /**
  * The example file has no secret field, so tests add one to cover "set / not set" and
- * replace-only behavior. Everything else comes from examples/ballspi/config.json.
+ * replace-only behavior. Everything else comes from config-template/config.json.
  */
 export const SECRET_FIELD: Field = {
   key: "TEST_API_KEY",

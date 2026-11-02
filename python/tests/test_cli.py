@@ -14,13 +14,13 @@ from pi_configurator.pydantic_fields import fields_from_model
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from .vectors import EXAMPLES
+from .vectors import CONFIG_TEMPLATE
 
 PYTHON_ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_check_example(capsys: pytest.CaptureFixture[str]) -> None:
-    assert main(["check", str(EXAMPLES / "ballspi" / "config.json")]) == 0
+    assert main(["check", str(CONFIG_TEMPLATE)]) == 0
     assert "OK (12 settings" in capsys.readouterr().out
 
 

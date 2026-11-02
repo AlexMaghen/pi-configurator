@@ -4,7 +4,7 @@ Target: Raspberry Pi OS Trixie (Pi 4B, Pi 5, Zero 2 W) with NetworkManager (the 
 
 ```sh
 git clone <this repo> ~/pi-configurator && cd ~/pi-configurator
-sudo ./deploy/install.sh --config examples/ballspi/config.json --reader pi
+sudo ./deploy/install.sh --reader pi
 sudo nano /etc/pi-configurator/config.json        # set a real access password first
 sudo pi-configurator check                         # lists problems with their codes
 sudo systemctl restart pi-configurator

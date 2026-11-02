@@ -282,8 +282,8 @@ pi-configurator/
   deploy/
     pi-configurator.service systemd unit
     install.sh              apt deps, user/group, dirs, unit
-  examples/
-    ballspi/config.json
+  config-template/
+    config.json             config template (BallsPi); install.sh default, app demo device
   docs/
   turbo.json, package.json  JS workspaces; Python tasks wrapped as turbo tasks
 ```

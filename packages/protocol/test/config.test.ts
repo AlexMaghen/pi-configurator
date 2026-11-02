@@ -23,7 +23,7 @@ describe("config cases", () => {
 
 describe("example configs", () => {
   it("BallsPi example is valid", () => {
-    const parsed = Config.safeParse(readJson(join(repoRoot, "examples/ballspi/config.json")));
+    const parsed = Config.safeParse(readJson(join(repoRoot, "config-template/config.json")));
     expect(parsed.success, JSON.stringify(parsed.error?.issues)).toBe(true);
   });
 

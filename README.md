@@ -14,7 +14,7 @@ settings the device's own software needs, from one generic app.
 | `python/` | uv workspace: the `pi-configurator` service and the `pi-configurator-client` package other Pi apps use to read values |
 | `apps/mobile` | Expo app "pi-configurator" (iPhone first, Android-ready) |
 | `deploy/` | systemd unit and install script for the Pi |
-| `examples/ballspi` | Config for the first target device |
+| `config-template/config.json` | The config file template (set up for BallsPi, the first target device); also the demo device in the app |
 
 ## Commands
 

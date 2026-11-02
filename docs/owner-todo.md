@@ -17,7 +17,7 @@ first implementation is done and tested on the Mac (see "State of the build" at 
    studfs-robots. For BallsPi to read them, studfs-robots' `deploy/systemd/balls.service` and
    `playstream.service` each need one line: `EnvironmentFile=-/var/lib/pi-configurator/ballspi.env`.
    I haven't touched studfs-robots. Approve and I'll make that change there.
-5. **Which BallsPi settings appear in the app.** `examples/ballspi/config.json` exposes Wi-Fi,
+5. **Which BallsPi settings appear in the app.** `config-template/config.json` exposes Wi-Fi,
    hostname, time zone, the HomeKit names, the four door/track timings, home-on-start, the
    stream URL and the log level. Add, remove or relabel as you like. Note `BallsSettings` has the
    comment "close_track_lead_seconds: 4 # was 8 in git; 4 on the live Pi", so the default is 4.
@@ -36,7 +36,7 @@ first implementation is done and tested on the Mac (see "State of the build" at 
 
 Nothing has run on a Pi or over real Bluetooth. The steps are in `deploy/README.md`; in short:
 
-1. Copy the repo to the Pi and run `sudo ./deploy/install.sh --config examples/ballspi/config.json --reader pi`.
+1. Copy the repo to the Pi and run `sudo ./deploy/install.sh --reader pi`.
 2. Set a real password in `/etc/pi-configurator/config.json`; run `sudo pi-configurator check`.
 3. `journalctl -u pi-configurator -f` should say it's advertising as "BallsPi".
 4. With nRF Connect on the iPhone: the service UUID `7f48fb74-…` and full name are visible, and
