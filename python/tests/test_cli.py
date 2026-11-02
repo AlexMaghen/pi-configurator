@@ -1,5 +1,6 @@
 """The command line: check, fields-from-pydantic, and the generated models being current."""
 
+import io
 import json
 import subprocess
 import sys
@@ -123,3 +124,50 @@ def test_generated_models_are_current() -> None:
         check=False,
     )
     assert result.returncode == 0, result.stderr
+
+
+def _copy_template(tmp_path: Path) -> Path:
+    path = tmp_path / "config.json"
+    path.write_bytes(CONFIG_TEMPLATE.read_bytes())
+    path.chmod(0o600)
+    return path
+
+
+def test_set_access_name_and_password(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    path = _copy_template(tmp_path)
+    monkeypatch.setattr("sys.stdin", io.StringIO("a-new-password\n"))
+    assert main(["set-access", str(path), "--name", "Kitchen Pi", "--password-stdin"]) == 0
+    data = json.loads(path.read_text())
+    assert data["bluetooth"]["name"] == "Kitchen Pi"
+    assert data["access"]["password"] == "a-new-password"
+    assert len(data["settings"]) == 12  # the rest of the file is kept
+    assert "saved" in capsys.readouterr().out
+
+
+def test_set_access_interactive(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    path = _copy_template(tmp_path)
+    answers = iter(["short", "long-enough-1", "long-enough-1"])
+
+    def keep_current_name(_prompt: str) -> str:
+        return ""
+
+    def next_password(_prompt: str) -> str:
+        return next(answers)
+
+    monkeypatch.setattr("builtins.input", keep_current_name)
+    monkeypatch.setattr("getpass.getpass", next_password)
+    assert main(["set-access", str(path)]) == 0
+    data = json.loads(path.read_text())
+    assert data["bluetooth"]["name"] == "BallsPi"
+    assert data["access"]["password"] == "long-enough-1"
+
+
+def test_set_access_refuses_bad_values(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    path = _copy_template(tmp_path)
+    before = path.read_bytes()
+    monkeypatch.setattr("sys.stdin", io.StringIO("short\n"))
+    assert main(["set-access", str(path), "--password-stdin"]) == 2
+    assert main(["set-access", str(path), "--name", "x" * 30]) == 2  # over 29 bytes
+    assert path.read_bytes() == before

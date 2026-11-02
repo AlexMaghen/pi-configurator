@@ -1,4 +1,4 @@
-"""Command line: `pi-configurator run | check [path] | fields-from-pydantic module:Class`.
+"""Command line: `pi-configurator run | check [path] | set-access [path] | fields-from-pydantic`.
 
 Paths default to the Pi locations and can be moved with flags or environment variables
 (PI_CONFIGURATOR_CONFIG, PI_CONFIGURATOR_STATE_DIR, PI_CONFIGURATOR_HOSTS_FILE), e.g. for tests.
@@ -50,6 +50,64 @@ def cmd_check(args: argparse.Namespace) -> int:
             print(f"  {issue}", file=sys.stderr)
         return EXIT_CONFIG_INVALID
     print(f"{path}: OK ({len(config.fields)} settings, Bluetooth name {config.name!r})")
+    return 0
+
+
+MIN_PASSWORD = 8  # same minimum the app asks for when changing the password from the phone
+
+
+def _ask_access(current_name: str) -> tuple[str, str]:
+    """Asks for the Bluetooth name (Enter keeps the current one) and a new password, twice."""
+    import getpass
+
+    name = input(f"Bluetooth name [{current_name}]: ").strip() or current_name
+    while True:
+        password = getpass.getpass(f"Access password (at least {MIN_PASSWORD} characters): ")
+        if len(password) < MIN_PASSWORD:
+            print(f"Too short: use at least {MIN_PASSWORD} characters.", file=sys.stderr)
+            continue
+        if getpass.getpass("Again: ") != password:
+            print("The two passwords don't match.", file=sys.stderr)
+            continue
+        return name, password
+
+
+def cmd_set_access(args: argparse.Namespace) -> int:
+    from .core.configfile import rewrite_config
+    from .protocol.jsonutil import JsonObject
+
+    path = Path(args.path) if args.path else _paths(args).config
+    try:
+        current = load_config_file(path)
+    except ConfigInvalid as err:
+        print(f"{path}: fix the config first ({len(err.issues)} problems)", file=sys.stderr)
+        return EXIT_CONFIG_INVALID
+    if args.name is None and not args.password_stdin:
+        name, password = _ask_access(current.name)
+    else:
+        name = args.name or current.name
+        password = sys.stdin.readline().rstrip("\r\n") if args.password_stdin else None
+        if password is not None and len(password) < MIN_PASSWORD:
+            print(f"the password needs at least {MIN_PASSWORD} characters", file=sys.stderr)
+            return EXIT_CONFIG_INVALID
+
+    def change(data: JsonObject) -> None:
+        bluetooth = data.setdefault("bluetooth", {})
+        access = data.setdefault("access", {})
+        assert isinstance(bluetooth, dict) and isinstance(access, dict)
+        bluetooth["name"] = name
+        if password is not None:
+            access["password"] = password
+
+    try:
+        rewrite_config(path, change)
+    except ConfigInvalid as err:
+        print(f"not saved: {len(err.issues)} problem(s)", file=sys.stderr)
+        for issue in err.issues:
+            print(f"  {issue}", file=sys.stderr)
+        return EXIT_CONFIG_INVALID
+    print(f"{path}: saved (Bluetooth name {name!r}). Restart the service to use it:")
+    print("  sudo systemctl restart pi-configurator")
     return 0
 
 
@@ -139,6 +197,19 @@ def build_parser() -> argparse.ArgumentParser:
         "path", nargs="?", help="config file (default /etc/pi-configurator/config.json)"
     )
     check.set_defaults(func=cmd_check)
+
+    access = sub.add_parser(
+        "set-access",
+        help="set the Bluetooth name and access password (asks for both when given no options)",
+    )
+    access.add_argument(
+        "path", nargs="?", help="config file (default /etc/pi-configurator/config.json)"
+    )
+    access.add_argument("--name", help="new Bluetooth name (at most 29 bytes)")
+    access.add_argument(
+        "--password-stdin", action="store_true", help="read the new password from standard input"
+    )
+    access.set_defaults(func=cmd_set_access)
 
     fields = sub.add_parser(
         "fields-from-pydantic", help="print config field entries for a settings class"

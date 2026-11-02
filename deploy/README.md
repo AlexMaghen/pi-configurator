@@ -3,9 +3,26 @@
 Target: Raspberry Pi OS Trixie (Pi 4B, Pi 5, Zero 2 W) with NetworkManager (the default).
 
 ```sh
-git clone <this repo> ~/pi-configurator && cd ~/pi-configurator
+curl -fsSL https://raw.githubusercontent.com/AlexMaghen/pi-configurator/main/deploy/get.sh | sudo bash -s -- --reader pi
+```
+
+`get.sh` downloads the repository into `/opt/pi-configurator/src` and runs `install.sh` from
+there; options after `-s --` go to `install.sh`. `PI_CONFIGURATOR_REF=v1.0.0` (before `bash`)
+installs a tag or branch instead of `main`.
+
+From a checkout instead:
+
+```sh
+git clone https://github.com/AlexMaghen/pi-configurator.git ~/pi-configurator && cd ~/pi-configurator
 sudo ./deploy/install.sh --reader pi
-sudo nano /etc/pi-configurator/config.json        # set a real access password first
+```
+
+On a first install the script asks for the Bluetooth name and an access password
+(`pi-configurator set-access`), and it doesn't start the service while the config still has the
+template's placeholder password. Then:
+
+```sh
+sudo nano /etc/pi-configurator/config.json        # the settings the phone may change
 sudo pi-configurator check                         # lists problems with their codes
 sudo systemctl restart pi-configurator
 journalctl -u pi-configurator -f
@@ -22,7 +39,8 @@ What `install.sh` does (safe to run again; never deletes or overwrites a config)
 | store and state | `/var/lib/pi-configurator/` (0750 root:pi-configurator): `values.json` (0640), `state.json` (0600) |
 | unit | `/etc/systemd/system/pi-configurator.service`, enabled; started only if the config passes `check` |
 
-Updating: `git pull && sudo ./deploy/install.sh`.
+Updating: run the `curl ... | sudo bash` line again (or `git pull && sudo ./deploy/install.sh` in a
+checkout).
 
 ## Reading settings from another program
 

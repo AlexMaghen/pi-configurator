@@ -39,8 +39,9 @@ first implementation is done and tested on the Mac (see "State of the build" at 
 
 Nothing has run on a Pi or over real Bluetooth. The steps are in `deploy/README.md`; in short:
 
-1. Copy the repo to the Pi and run `sudo ./deploy/install.sh --reader pi`.
-2. Set a real password in `/etc/pi-configurator/config.json`; run `sudo pi-configurator check`.
+1. On the Pi: `curl -fsSL https://raw.githubusercontent.com/AlexMaghen/pi-configurator/main/deploy/get.sh | sudo bash -s -- --reader pi`
+   (needs the repo public; until then, clone it with your GitHub login and run `sudo ./deploy/install.sh --reader pi`).
+2. The installer asks for the Bluetooth name and password; check with `sudo pi-configurator check`.
 3. `journalctl -u pi-configurator -f` should say it's advertising as "BallsPi".
 4. With nRF Connect on the iPhone: the service UUID `7f48fb74-…` and full name are visible, and
    reading the `info` characteristic returns JSON.
