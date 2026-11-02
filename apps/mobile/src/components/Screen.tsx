@@ -37,7 +37,11 @@ export function Screen({ children, actions, refreshControl, scroll = true }: Scr
       ) : (
         <View style={s.screen}>{children}</View>
       )}
-      {actions ? <View style={[s.actionBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>{actions}</View> : null}
+      {actions ? (
+        <View style={[s.actionBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+          <View style={s.actionBarRow}>{actions}</View>
+        </View>
+      ) : null}
     </KeyboardAvoidingView>
   );
 }

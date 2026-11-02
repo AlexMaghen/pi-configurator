@@ -26,11 +26,14 @@ first implementation is done and tested on the Mac (see "State of the build" at 
 
 ## 2. Accounts and builds
 
-1. **iPhone build.** Open `apps/mobile` with `npx expo run:ios --device` (or Xcode) and pick
-   your Apple team for signing the first time. I didn't sign in to anything or use EAS.
+1. **TestFlight.** The app is now "pi-fig", runs on iPhone and iPad, and has its own icon.
+   Store icons, screenshots, text and a privacy policy are in `store/` (see `store/README.md`).
+   To upload: pick the final app ID, create the app in App Store Connect, set your team in
+   Xcode, then Product → Archive → Distribute App → TestFlight & App Store.
 2. **Android.** Not built yet. Permissions are configured but untested; needs Android Studio /
    an emulator and a phone with BLE.
-3. **App icon and splash** are Expo placeholders.
+3. **Splash screen** is still the plain default (no `expo-splash-screen` set up);
+   `apps/mobile/assets/splash-icon.png` is ready for it.
 
 ## 3. Testing on the real Pi (BallsPi)
 

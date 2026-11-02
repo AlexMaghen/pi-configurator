@@ -1,0 +1,1 @@
+Set up a Raspberry Pi's Wi-Fi and settings from your phone over Bluetooth.

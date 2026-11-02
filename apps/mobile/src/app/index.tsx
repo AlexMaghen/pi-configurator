@@ -25,7 +25,7 @@ const RADIO_MESSAGES: Partial<Record<RadioState, { title: string; body: string; 
   off: { title: "Bluetooth is off", body: "Turn on Bluetooth in Control Center or Settings to find devices." },
   unauthorized: {
     title: "Bluetooth access is off",
-    body: "pi-configurator needs Bluetooth to find your devices. Allow it in Settings.",
+    body: "pi-fig needs Bluetooth to find your devices. Allow it in Settings.",
     settings: true,
   },
   unsupported: {

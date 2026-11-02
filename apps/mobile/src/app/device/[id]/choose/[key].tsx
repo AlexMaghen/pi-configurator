@@ -75,6 +75,7 @@ export default function ChooseScreen() {
       <Stack.Screen options={{ title: field.label }} />
       <FlatList
         style={l.screen}
+        contentContainerStyle={l.readableList}
         contentInsetAdjustmentBehavior="automatic"
         keyboardShouldPersistTaps="handled"
         data={choices}

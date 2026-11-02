@@ -4,11 +4,23 @@
  */
 import { createStyles } from "@/theme";
 
+/** Widest a page's content gets; on iPad it stays this wide, centred, so rows stay readable. */
+export const READABLE_WIDTH = 720;
+
 export const useLayoutStyles = createStyles((t) => ({
   /** Full-screen background. */
   screen: { flex: 1, backgroundColor: t.colors.background },
   /** Padding for a scrolling page's content. */
-  page: { padding: t.space.lg, paddingBottom: t.space.xxl, gap: t.space.xl },
+  page: {
+    padding: t.space.lg,
+    paddingBottom: t.space.xxl,
+    gap: t.space.xl,
+    width: "100%",
+    maxWidth: READABLE_WIDTH,
+    alignSelf: "center",
+  },
+  /** The same width limit for lists that scroll themselves (FlatList contentContainerStyle). */
+  readableList: { width: "100%", maxWidth: READABLE_WIDTH, alignSelf: "center" },
   /** A titled block of rows. */
   section: { gap: t.space.sm },
   sectionTitle: {
@@ -55,13 +67,19 @@ export const useLayoutStyles = createStyles((t) => ({
   emptyBlock: { minHeight: 320 },
   /** Bottom bar with the main action (e.g. Save). */
   actionBar: {
-    flexDirection: "row",
-    gap: t.space.md,
     paddingHorizontal: t.space.lg,
     paddingTop: t.space.md,
     borderTopWidth: 1,
     borderTopColor: t.colors.border,
     backgroundColor: t.colors.surface,
+  },
+  /** The buttons inside the action bar, kept to the page's width. */
+  actionBarRow: {
+    flexDirection: "row",
+    gap: t.space.md,
+    width: "100%",
+    maxWidth: READABLE_WIDTH - 2 * t.space.lg,
+    alignSelf: "center",
   },
   /** Centered block for empty and loading states. */
   centered: { flex: 1, alignItems: "center", justifyContent: "center", padding: t.space.xl, gap: t.space.md },

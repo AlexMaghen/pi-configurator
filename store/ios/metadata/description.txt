@@ -1,0 +1,24 @@
+pi-fig sets up Raspberry Pi devices from your iPhone or iPad over Bluetooth. Put a Pi somewhere without a screen or keyboard, open pi-fig, and change its settings in a form the device itself describes.
+
+CONNECT WITHOUT A NETWORK
+Your Pi doesn't need to be on Wi-Fi yet. pi-fig finds nearby devices running the free pi-configurator service and talks to them directly over Bluetooth LE.
+
+WI-FI, HOSTNAME AND TIME ZONE
+See the networks the Pi can see, with signal strength and security. Join one, switch networks, or rejoin a saved network without typing its password again. Rename the Pi on your network and set its time zone.
+
+YOUR OWN SETTINGS
+Each device lists its own settings in a config file: text, numbers with ranges and steps, on/off switches, choices and secrets. pi-fig draws the form from that list, checks every value before saving, and shows which values are saved, which are defaults and which come from the device. The Pi can restart your services after a change so new values take effect straight away.
+
+PASSWORD PROTECTED
+Each device has its own access password. pi-fig proves it knows the password without ever sending it, using the SRP protocol, and encrypts everything after that. Passwords can be remembered in your device's Keychain.
+
+EVERYTHING ELSE
+- Live progress while changes are applied
+- Reboot the Pi from your phone, if the device allows it
+- Change the device's password or Bluetooth name, if the device allows it
+- Light and dark mode
+- A built-in demo device, so you can try every screen without a Pi
+
+pi-fig needs the pi-configurator service on each Raspberry Pi. pi-fig collects no data: there are no accounts, no analytics and no internet connection.
+
+Raspberry Pi is a trademark of Raspberry Pi Ltd. pi-fig is not affiliated with or endorsed by Raspberry Pi Ltd.

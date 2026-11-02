@@ -1,0 +1,1 @@
+Configure Wi-Fi, hostname, time zone and your own app settings on a Raspberry Pi from your iPhone or iPad. No screen, keyboard or network needed.

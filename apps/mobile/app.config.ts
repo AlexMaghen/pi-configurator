@@ -5,6 +5,8 @@
  * checked in. Bluetooth needs a development build (expo-dev-client); it does not run in Expo Go.
  *
  * OWNER TO CONFIRM: the bundle identifier / Android package below is a placeholder.
+ *
+ * The app's short name (under the icon) is "pi-fig". Icons are drawn by store/scripts/make-icons.sh.
  */
 import type { ConfigContext, ExpoConfig } from "expo/config";
 
@@ -12,11 +14,11 @@ import type { ConfigContext, ExpoConfig } from "expo/config";
 const APP_ID = "com.alexmaghen.piconfigurator";
 
 const BLUETOOTH_REASON =
-  "pi-configurator uses Bluetooth to find your Raspberry Pi devices nearby and change their settings.";
+  "pi-fig uses Bluetooth to find your Raspberry Pi devices nearby and change their settings.";
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: "pi-configurator",
+  name: "pi-fig",
   slug: "pi-configurator",
   scheme: "piconfigurator",
   version: "0.1.0",
@@ -25,21 +27,32 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   userInterfaceStyle: "automatic",
   ios: {
     bundleIdentifier: APP_ID,
-    supportsTablet: false,
+    // Raise for every upload to App Store Connect (TestFlight refuses a repeated build number).
+    buildNumber: "1",
+    supportsTablet: true,
     infoPlist: {
       NSBluetoothAlwaysUsageDescription: BLUETOOTH_REASON,
       ITSAppUsesNonExemptEncryption: false,
       // Hide expo-dev-menu's floating gear button in dev builds: it sits over the header's right
       // button. The dev menu is still available by shaking the device or pressing Cmd+D.
       EXDevMenuShowFloatingActionButton: false,
+      // iPhone stays portrait (`orientation` above). App Store Connect requires iPad apps to
+      // support every orientation for multitasking, so iPad gets all four.
+      "UISupportedInterfaceOrientations~ipad": [
+        "UIInterfaceOrientationPortrait",
+        "UIInterfaceOrientationPortraitUpsideDown",
+        "UIInterfaceOrientationLandscapeLeft",
+        "UIInterfaceOrientationLandscapeRight",
+      ],
     },
   },
   android: {
     package: APP_ID,
+    // Raise for every upload to Google Play.
+    versionCode: 1,
     adaptiveIcon: {
-      backgroundColor: "#E6F4FE",
+      backgroundColor: "#FFFFFF",
       foregroundImage: "./assets/android-icon-foreground.png",
-      backgroundImage: "./assets/android-icon-background.png",
       monochromeImage: "./assets/android-icon-monochrome.png",
     },
     // BLUETOOTH_SCAN / BLUETOOTH_CONNECT (Android 12+) and location (Android 11 and older) are
