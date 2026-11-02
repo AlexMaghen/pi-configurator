@@ -1,30 +1,43 @@
 /**
- * Settings: the device's form, built from `settings.describe` and grouped by `group` in
- * first-seen order. Edits stay as drafts in the store (so the choose and Wi-Fi screens can
- * add to them) until Save, which sends only changed fields with `settings.set`. While saving,
- * the Pi's status events show live; afterwards each refused field shows the Pi's message.
+ * The body of both device pages: the device's settings from `settings.describe`, grouped by
+ * `group` in first-seen order, under the Device & Network / Application Settings control.
+ * `tab` picks the fields: the OS settings (Wi-Fi, hostname, time zone) or the config's own.
+ *
+ * Edits stay as drafts in the store (so the choose and Wi-Fi screens, and the other tab, can add
+ * to them) until Save, which sends every changed field with `settings.set`, whichever tab it's
+ * on. While saving, the Pi's status events show live; afterwards each refused field shows the
+ * Pi's message. `children` render below the settings (the device sections on Device & Network).
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Text, View } from "react-native";
-import { Stack, router, useLocalSearchParams } from "expo-router";
+import { Stack, router } from "expo-router";
 import { Banner } from "@/components/Banner";
 import { Button, HeaderButton } from "@/components/Button";
+import { DeviceTabs, type DeviceTab } from "@/components/DeviceTabs";
 import { FieldControl } from "@/components/FieldControl";
 import { ProgressNote } from "@/components/ProgressNote";
 import { Screen } from "@/components/Screen";
 import { Section } from "@/components/Section";
 import { StatusFeed } from "@/components/StatusFeed";
-import { groupFields, pendingChanges } from "@/lib/form/model";
+import { groupFields, isSystemField, pendingChanges } from "@/lib/form/model";
 import { formatNumber } from "@/lib/format/numbers";
 import { errorMessage } from "@/lib/link/errors";
-import { useSession, useStore } from "@/lib/session/AppProvider";
+import { useDevice, useSession, useStore } from "@/lib/session/AppProvider";
 import type { SaveOutcome } from "@/lib/session/AppStore";
 import { useLayoutStyles } from "@/styles/layout";
 
-export default function SettingsScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+export interface SettingsFormProps {
+  id: string;
+  tab: DeviceTab;
+  /** Shown when this tab has no settings (null hides the note). */
+  emptyText: string | null;
+  children?: ReactNode;
+}
+
+export function SettingsForm({ id, tab, emptyText, children }: SettingsFormProps) {
   const store = useStore();
   const session = useSession(id);
+  const device = useDevice(id);
   const l = useLayoutStyles();
   const [outcome, setOutcome] = useState<SaveOutcome>();
   const [failure, setFailure] = useState<string>();
@@ -37,7 +50,12 @@ export default function SettingsScreen() {
     if (session.phase === "unlocked" && !fields) store.load(id).catch((err) => setFailure(errorMessage(err)));
   }, [fields, id, session.phase, store]);
 
-  const groups = useMemo(() => groupFields(fields ?? []), [fields]);
+  const shown = useMemo(
+    () => (fields ?? []).filter((f) => isSystemField(f) === (tab === "device-network")),
+    [fields, tab],
+  );
+  const groups = useMemo(() => groupFields(shown), [shown]);
+  // Counts changes on both tabs: Save sends them all.
   const pending = useMemo(() => pendingChanges(fields ?? [], values, drafts), [fields, values, drafts]);
   const hasErrors = Object.keys(pending.errors).length > 0;
   const liveEntries = saveStartedAt ? session.activity.filter((a) => a.at >= saveStartedAt) : [];
@@ -59,13 +77,12 @@ export default function SettingsScreen() {
     <>
       <Stack.Screen
         options={{
-          title: info?.name ?? "Settings",
+          title: info?.name ?? device?.name ?? "Device",
+          // Leaving is the X on the right, back to the device list (the session stays open
+          // until Disconnect or the idle timeout, as before).
+          headerBackVisible: false,
           headerRight: () => (
-            <HeaderButton
-              icon="cpu"
-              label="Device menu"
-              onPress={() => router.push({ pathname: "/device/[id]/menu", params: { id } })}
-            />
+            <HeaderButton icon="closeCircle" label="Close device" onPress={() => router.dismissAll()} />
           ),
         }}
       />
@@ -93,6 +110,8 @@ export default function SettingsScreen() {
           ) : undefined
         }
       >
+        <DeviceTabs id={id} current={tab} />
+
         {!fields ? <ProgressNote text="Loading settings" /> : null}
 
         {failure ? <Banner tone="error" title="Couldn't save">{failure}</Banner> : null}
@@ -135,9 +154,9 @@ export default function SettingsScreen() {
           </Section>
         ))}
 
-        {fields && fields.length === 0 ? (
-          <Text style={l.sectionFooter}>This device has no settings in its config file.</Text>
-        ) : null}
+        {fields && shown.length === 0 && emptyText ? <Text style={l.sectionFooter}>{emptyText}</Text> : null}
+
+        {children}
       </Screen>
     </>
   );

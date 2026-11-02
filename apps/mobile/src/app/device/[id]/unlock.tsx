@@ -52,7 +52,7 @@ export default function UnlockScreen() {
   const isDemo = device?.demo ?? id.startsWith("demo-");
 
   const openSettings = useCallback(() => {
-    router.replace({ pathname: "/device/[id]/settings", params: { id } });
+    router.replace({ pathname: "/device/[id]/device-network", params: { id } });
   }, [id]);
 
   const showError = useCallback((err: unknown) => {

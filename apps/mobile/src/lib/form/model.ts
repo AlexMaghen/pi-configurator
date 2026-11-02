@@ -43,6 +43,9 @@ export function groupFields(fields: DescribedField[]): FieldGroup[] {
 }
 
 export const isStoreField = (field: DescribedField): boolean => "store" in field.target;
+/** Settings the Pi applies to the OS (Wi-Fi, hostname, time zone): the "Device & Network" page.
+ * Everything else (the config's own settings) is on "Application Settings". */
+export const isSystemField = (field: DescribedField): boolean => "system" in field.target;
 export const isSecretField = (field: DescribedField): boolean => field.type === "string" && field.secret === true;
 export const isNumberField = (field: DescribedField): boolean => field.type === "integer" || field.type === "number";
 

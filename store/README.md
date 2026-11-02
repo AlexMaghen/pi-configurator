@@ -54,8 +54,8 @@ for f in store/ios/screenshots/*/*.png; do magick "$f" -background white -alpha 
 ```
 
 The five shots, in order: a setting edited and ready to save, the save's progress, the Wi-Fi
-networks the Pi sees, the time zone list, and the device menu. Retake them after the
-template's settings change (they show the demo device, which uses `config-template/config.json`).
+networks the Pi sees, the time zone list, and the device menu. They predate the Device & Network /
+Application Settings layout: retake them after it, and after the template's settings change (they show the demo device, which uses `config-template/config.json`).
 
 ## Answers App Store Connect will ask for
 

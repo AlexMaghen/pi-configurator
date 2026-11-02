@@ -21,6 +21,7 @@ export type IconName =
   | "chevronDown"
   | "chevronRight"
   | "close"
+  | "closeCircle"
   | "cpu"
   | "eye"
   | "eyeOff"
@@ -64,6 +65,13 @@ const SHAPES: Record<IconName, React.ReactNode> = {
     <>
       <Line x1="18" y1="6" x2="6" y2="18" />
       <Line x1="6" y1="6" x2="18" y2="18" />
+    </>
+  ),
+  closeCircle: (
+    <>
+      <Circle cx="12" cy="12" r="10" />
+      <Line x1="15" y1="9" x2="9" y2="15" />
+      <Line x1="9" y1="9" x2="15" y2="15" />
     </>
   ),
   cpu: (

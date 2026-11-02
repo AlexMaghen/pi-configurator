@@ -1,22 +1,21 @@
 /**
- * Device menu: what the device reported about itself, and the actions its permissions allow.
- * Reboot needs `permissions.allowReboot`; Change password and Rename need
- * `permissions.allowAccessChanges`. Hidden controls are refused by the Pi anyway.
+ * The device part of Device & Network, under the network settings: what the device reported
+ * about itself, and the actions its permissions allow. Reboot needs `permissions.allowReboot`;
+ * Change password and Rename need `permissions.allowAccessChanges`. Hidden controls are refused
+ * by the Pi anyway.
  */
 import { useEffect, useState } from "react";
 import { Alert } from "react-native";
-import { router, useLocalSearchParams } from "expo-router";
+import { router } from "expo-router";
 import { Badge } from "@/components/Badge";
 import { Banner } from "@/components/Banner";
 import { ListRow } from "@/components/ListRow";
-import { Screen } from "@/components/Screen";
 import { Section } from "@/components/Section";
 import { errorMessage } from "@/lib/link/errors";
 import { useDevice, useSession, useStore } from "@/lib/session/AppProvider";
 import { useTheme } from "@/theme";
 
-export default function DeviceMenuScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+export function DeviceSections({ id }: { id: string }) {
   const store = useStore();
   const session = useSession(id);
   const device = useDevice(id);
@@ -31,7 +30,7 @@ export default function DeviceMenuScreen() {
 
   const { info, permissions } = session;
   const name = info?.name ?? device?.name ?? "Device";
-  const go = (pathname: "/device/[id]/wifi" | "/device/[id]/activity" | "/device/[id]/password" | "/device/[id]/rename") =>
+  const go = (pathname: "/device/[id]/activity" | "/device/[id]/password" | "/device/[id]/rename") =>
     router.push({ pathname, params: { id } });
 
   const reboot = () =>
@@ -64,21 +63,15 @@ export default function DeviceMenuScreen() {
   };
 
   return (
-    <Screen>
+    <>
       {error ? <Banner tone="error">{error}</Banner> : null}
       <Section title="Device">
-        <ListRow
-          title={name}
-          icon="cpu"
-          trailing={device?.demo ? <Badge label="Demo" color={colors.demo} background={colors.demoSoft} /> : undefined}
-        />
+        {device?.demo ? (
+          <ListRow title="Demo device" trailing={<Badge label="Demo" color={colors.demo} background={colors.demoSoft} />} />
+        ) : null}
         {info?.model ? <ListRow title="Model" value={info.model} /> : null}
         <ListRow title="Service version" value={info?.serviceVersion ?? "Unknown"} />
         <ListRow title="Protocol" value={info ? String(info.protocol) : "Unknown"} />
-      </Section>
-
-      <Section>
-        <ListRow title="Wi-Fi" icon="wifi" onPress={() => go("/device/[id]/wifi")} />
         <ListRow title="Activity" icon="activity" onPress={() => go("/device/[id]/activity")} />
       </Section>
 
@@ -101,6 +94,6 @@ export default function DeviceMenuScreen() {
         ) : null}
         <ListRow title="Disconnect" icon="logout" onPress={() => void disconnect()} chevron={false} />
       </Section>
-    </Screen>
+    </>
   );
 }

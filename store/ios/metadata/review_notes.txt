@@ -5,6 +5,6 @@ To try every screen:
 2. Turn on "Show demo device" and go back.
 3. Tap "BallsPi" (marked Demo).
 4. Enter the password: 1234
-5. Edit any setting and tap Save. The Wi-Fi network row opens a list of networks; the chip button at the top right opens the device menu (Activity, Reboot, Change password, Rename).
+5. The device opens on "Device & Network": the Wi-Fi network row opens a list of networks, and below the network settings are the device's info and actions (Activity, Reboot, Disconnect). Switch to "Application Settings" at the top for the device's own settings. Edit any setting and tap Save.
 
 No account or sign-in is needed. The app has no server and makes no internet connections. Bluetooth is used only to find and talk to nearby Raspberry Pi devices.

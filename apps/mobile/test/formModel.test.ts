@@ -8,6 +8,7 @@ import { validateValue, type DescribedField, type ValueState } from "@pi-configu
 import {
   groupFields,
   initialText,
+  isSystemField,
   isChange,
   limitsText,
   pendingChanges,
@@ -69,6 +70,11 @@ describe("grouping", () => {
     for (const g of groups.slice(0, -1)) {
       expect(g.fields.map((f) => f.key)).toEqual(fields.filter((f) => f.group === g.title).map((f) => f.key));
     }
+  });
+
+  it("puts the OS settings on Device & Network and the rest on Application Settings", () => {
+    expect(fields.filter(isSystemField).map((f) => f.key)).toEqual(["wifi", "hostname", "timezone"]);
+    expect(fields.filter((f) => !isSystemField(f)).every((f) => "store" in f.target)).toBe(true);
   });
 });
 
