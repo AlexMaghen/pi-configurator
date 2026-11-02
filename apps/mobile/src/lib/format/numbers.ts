@@ -12,9 +12,18 @@ export function formatNumber(n: number): string {
   return `${n < 0 ? "-" : ""}${grouped}${fraction !== undefined ? `.${fraction}` : ""}`;
 }
 
-/** Parses what a user typed, accepting thousands separators and spaces. Undefined if not a number. */
+/**
+ * Parses what a user typed, accepting thousands separators and spaces. Undefined if not a number.
+ *
+ * The iOS decimal pad shows a comma instead of a point in countries that write 2,5. So a single
+ * comma with no point is read as a decimal comma, unless exactly three digits follow it
+ * ("1,250" stays one thousand two hundred fifty, as the app itself writes it).
+ */
 export function parseNumber(text: string): number | undefined {
-  const clean = text.replace(/[,\s_]/g, "");
+  let typed = text.trim();
+  const decimalComma = /^[-+]?\d*,(\d{1,2}|\d{4,})$/;
+  if (decimalComma.test(typed)) typed = typed.replace(",", ".");
+  const clean = typed.replace(/[,\s_]/g, "");
   if (!/^[-+]?(\d+\.?\d*|\.\d+)$/.test(clean)) return undefined;
   const n = Number(clean);
   return Number.isFinite(n) ? n : undefined;

@@ -14,6 +14,7 @@
     "lint": "expo lint"
   },
   "dependencies": {
+    "@expo/ui": "~58.0.26",
     "@pi-configurator/protocol": "workspace:*",
     "expo": "~58.0.22",
     "expo-constants": "~58.0.14",

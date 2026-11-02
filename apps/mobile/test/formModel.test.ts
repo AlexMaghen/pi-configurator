@@ -52,6 +52,14 @@ describe("numbers", () => {
     expect(parseNumber("12a")).toBeUndefined();
     expect(parseNumber("")).toBeUndefined();
   });
+  it("reads a decimal comma from the decimal pad", () => {
+    expect(parseNumber("2,5")).toBe(2.5);
+    expect(parseNumber("0,75")).toBe(0.75);
+    expect(parseNumber(",5")).toBe(0.5);
+    expect(parseNumber("1,2345")).toBe(1.2345);
+    expect(parseNumber("1,250")).toBe(1250); // three digits: a thousands separator
+    expect(parseNumber("1,250.5")).toBe(1250.5);
+  });
   it("maps signal to bars", () => {
     expect(rssiBars(-50)).toBe(4);
     expect(rssiBars(-85)).toBe(1);

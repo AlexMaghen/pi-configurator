@@ -114,9 +114,9 @@ Edited by hand or by a device's install script, not by the phone (v1).
 | `group` | no | Section heading in the form; groups appear in first-seen order |
 | `help` | no | One line under the field |
 | `secret` | no | Never sent back to the phone; the form shows "set" / "not set" and allows replacing it |
-| `min`, `max`, `step`, `unit` | no | Numbers |
+| `min`, `max`, `step`, `unit` | no | Numbers. `unit` is a label shown beside the field ("s", "ms", "%"). With `min` of 0 or more the phone shows the number pad (`integer`) or the decimal pad (`number`); otherwise a keyboard with a minus sign |
 | `pattern`, `format`, `minLength`, `maxLength` | no | Strings; `format` is `url`, `email` or `multiline` |
-| `options` | for `select` | `[{ "value": "...", "label": "..." }]` |
+| `options` | for `select` | `[{ "value": "...", "label": "..." }]`. Up to 10 options show as a drop-down menu on the field; longer lists (e.g. time zones) open a searchable page |
 | `readOnly` | no | Shown but not editable (e.g. a serial number) |
 | `onChange.restart` | no | systemd units to restart after this field changes (once per save, not per field) |
 

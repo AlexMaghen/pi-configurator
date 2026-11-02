@@ -4,14 +4,16 @@
  *   string           text input (url / email keyboards, multiline), or replace-only when secret
  *   integer, number  numeric input with unit, limits and step; shown with thousands separators
  *   boolean          switch
- *   select           a row that opens the stand-alone choose screen (searchable)
+ *   select           up to MENU_MAX_OPTIONS options: a native drop-down menu on the row;
+ *                    more (e.g. time zones): a row that opens the searchable choose screen
  *   wifi             a row that opens the Wi-Fi screen
  *
  * Every field shows its help line, where its value came from (saved / default / the device),
  * inline validation from the shared rules, the Pi's error after a failed save, and "Reset to
  * default" for saved store fields. Read-only fields are shown disabled.
  */
-import { Pressable, Switch, Text, TextInput, View } from "react-native";
+import { MenuView } from "@expo/ui/community/menu";
+import { Pressable, Switch, Text, TextInput, View, type KeyboardTypeOptions } from "react-native";
 import type { DescribedField, ValueState } from "@pi-configurator/protocol";
 import {
   currentValue,
@@ -43,6 +45,24 @@ export interface FieldControlProps {
   onChoose: () => void;
   /** wifi fields: open the Wi-Fi screen. */
   onWifi: () => void;
+}
+
+/** Select fields with at most this many options use the drop-down menu instead of a page. */
+const MENU_MAX_OPTIONS = 10;
+
+/**
+ * The keyboard for a text field. Numbers that can't go below zero get the digit-only pads (the
+ * decimal pad adds a decimal point); iOS has no pad with a minus sign, so a field that allows
+ * negatives (no `min`, or a negative one) gets the numbers-and-punctuation keyboard instead.
+ */
+function keyboardFor(field: DescribedField): KeyboardTypeOptions {
+  if (field.type === "integer" || field.type === "number") {
+    if (field.min === undefined || field.min < 0) return "numbers-and-punctuation";
+    return field.type === "integer" ? "number-pad" : "decimal-pad";
+  }
+  if (field.type === "string" && field.format === "url") return "url";
+  if (field.type === "string" && field.format === "email") return "email-address";
+  return "default";
 }
 
 /** A field's default as display text, when the description has one. */
@@ -141,9 +161,34 @@ export function FieldControl({ field, state, draft, saveError, onDraft, onChoose
       case "select": {
         const value = draft?.kind === "value" ? draft.value : currentValue(state);
         const label = optionLabel(field, value) ?? "Choose";
+        const pickerStyle = [f.picker, readOnly && f.inputDisabled, error ? f.inputError : changed ? f.inputChanged : null];
+        const options = field.options ?? [];
+        if (options.length > 0 && options.length <= MENU_MAX_OPTIONS) {
+          const saved = currentValue(state);
+          const row = (
+            <View style={pickerStyle} accessibilityRole="button" accessibilityLabel={`${field.label}: ${label}`}>
+              <Text style={f.pickerText} numberOfLines={1}>
+                {label}
+              </Text>
+              <Icon name="chevronDown" color={colors.textMuted} em={1.1} />
+            </View>
+          );
+          if (readOnly) return row;
+          return (
+            <MenuView
+              title={field.label}
+              actions={options.map((o) => ({ id: o.value, title: o.label, state: o.value === value ? "on" : "off" }))}
+              onPressAction={({ nativeEvent }) =>
+                onDraft(nativeEvent.event === saved ? undefined : { kind: "value", value: nativeEvent.event })
+              }
+            >
+              {row}
+            </MenuView>
+          );
+        }
         return (
           <Pressable accessibilityRole="button" accessibilityLabel={`${field.label}: ${label}`} onPress={onChoose} disabled={readOnly}>
-            <View style={[f.picker, readOnly && f.inputDisabled, error ? f.inputError : changed ? f.inputChanged : null]}>
+            <View style={pickerStyle}>
               <Text style={f.pickerText} numberOfLines={1}>
                 {label}
               </Text>
@@ -178,17 +223,7 @@ export function FieldControl({ field, state, draft, saveError, onDraft, onChoose
             multiline={multiline}
             autoCapitalize="none"
             autoCorrect={false}
-            keyboardType={
-              numeric
-                ? field.type === "integer" && (field.min ?? 0) >= 0
-                  ? "number-pad"
-                  : "numbers-and-punctuation"
-                : field.type === "string" && field.format === "url"
-                  ? "url"
-                  : field.type === "string" && field.format === "email"
-                    ? "email-address"
-                    : "default"
-            }
+            keyboardType={keyboardFor(field)}
             onChangeText={(next) => onDraft({ kind: "text", text: next })}
             onBlur={() => {
               // Show numbers with thousands separators again once the user is done typing.

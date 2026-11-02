@@ -28,7 +28,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // The owner's Apple Developer team, so Xcode signs with it automatically.
     appleTeamId: "4Z3U3P6Q63",
     // Raise for every upload to App Store Connect (TestFlight refuses a repeated build number).
-    buildNumber: "4",
+    buildNumber: "5",
     supportsTablet: true,
     infoPlist: {
       NSBluetoothAlwaysUsageDescription: BLUETOOTH_REASON,
@@ -49,7 +49,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   android: {
     package: APP_ID,
     // Raise for every upload to Google Play.
-    versionCode: 4,
+    versionCode: 5,
     adaptiveIcon: {
       backgroundColor: "#FFFFFF",
       foregroundImage: "./assets/android-icon-foreground.png",

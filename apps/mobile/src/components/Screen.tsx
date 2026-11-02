@@ -52,6 +52,8 @@ export function Screen({ children, actions, refreshControl, scroll = true }: Scr
           <ScrollView
             contentContainerStyle={s.page}
             keyboardShouldPersistTaps="handled"
+            // Number pads have no return key: scrolling the page puts the keyboard away.
+            keyboardDismissMode="interactive"
             contentInsetAdjustmentBehavior="automatic"
             refreshControl={refreshControl}
           >
