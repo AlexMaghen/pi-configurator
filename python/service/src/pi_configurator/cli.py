@@ -106,7 +106,8 @@ def cmd_set_access(args: argparse.Namespace) -> int:
         for issue in err.issues:
             print(f"  {issue}", file=sys.stderr)
         return EXIT_CONFIG_INVALID
-    print(f"{path}: saved (Bluetooth name {name!r}). Restart the service to use it:")
+    print(f"{path}: saved (Bluetooth name {name!r}).")
+    print("If the service is running, restart it to use them:")
     print("  sudo systemctl restart pi-configurator")
     return 0
 

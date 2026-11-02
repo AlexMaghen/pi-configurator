@@ -30,3 +30,6 @@ build/
 
 # macOS / editors
 .DS_Store
+
+# Output of deploy/test/run.sh
+deploy/test/out/

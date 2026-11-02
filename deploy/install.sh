@@ -102,7 +102,9 @@ placeholder_password() {
 
 if placeholder_password; then
   step "Bluetooth name and password"
-  if [[ -r /dev/tty ]] && (: </dev/tty) 2>/dev/null; then
+  # Ask only when someone is watching: the output goes to a terminal (stdin is the script itself
+  # under `curl | bash`) and that terminal can be opened for the answers.
+  if [[ -t 1 || -t 2 ]] && (: </dev/tty) 2>/dev/null; then
     echo "The phone app shows this device by its Bluetooth name and unlocks it with this password."
     "$VENV/bin/pi-configurator" set-access "$CONFIG" </dev/tty >/dev/tty || true
   else

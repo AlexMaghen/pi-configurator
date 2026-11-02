@@ -73,3 +73,10 @@ units named in `onChange.restart` after a save.
    (`2c983635-7bab-4db2-afa8-e98c4992b855`) returns the JSON device info.
 3. The app (or a test client) unlocks, reads and saves settings; `values.json` and the env file
    change, and the restarted units show up in the journal.
+
+## Testing the installer
+
+`./deploy/test/run.sh` (on a Mac with Docker) installs the working tree in a clean Debian Trixie
+container three ways: a first install with no terminal, a first install answering the name and
+password prompts, and an update. Containers have no systemd or Bluetooth, so `systemctl` is a
+stub there and the service itself still needs a real Pi.
