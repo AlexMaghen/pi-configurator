@@ -12,7 +12,25 @@ Two parts work together:
 
 ## Installation
 
-### On the Raspberry Pi
+There are two ways to put pi-configurator on a Pi: set up the SD card from your Mac or PC
+before the Pi's first boot (no internet needed on the Pi), or run one command on a Pi that's
+already running.
+
+### From your Mac or PC, on a new SD card
+
+1. Write **64-bit Raspberry Pi OS** (from 24 November 2025 or later) to the card with
+   [Raspberry Pi Imager](https://www.raspberrypi.com/software/). Its OS customisation (user,
+   Wi-Fi, SSH) is optional.
+2. Leave the card in your computer and run **build-pifig-sd** (see
+   [apps/build-pifig-sd](apps/build-pifig-sd/README.md)). It finds the card's boot drive, shows
+   it and asks before changing anything, then asks for the **Device Name** the phone will show
+   and the **pifig Access Password** that unlocks it.
+3. Put the card in the Pi and switch it on. On its first boot the Pi installs pi-configurator by
+   itself, with no internet, and starts advertising over Bluetooth under that name.
+
+The card must not have been started in a Pi before: the install runs on the very first boot.
+
+### On a running Raspberry Pi
 
 Needs Raspberry Pi OS Trixie (Pi 4B, Pi 5, Zero 2 W) with Bluetooth. On the Pi's command line,
 run:
@@ -94,6 +112,7 @@ its Preferences.
 | `python/` | uv workspace: the `pi-configurator` service and the `pi-configurator-client` package other Pi apps use to read values |
 | `apps/mobile` | Expo app "pi-fig" (iPhone and iPad first, Android-ready) |
 | `deploy/` | One-line installer (`get.sh`), install script and systemd unit for the Pi |
+| `apps/build-pifig-sd` | Command-line tool for Mac and Windows that sets up a Raspberry Pi OS SD card so the Pi installs pi-configurator on first boot, offline |
 | `config-template/config.json` | The config file template (set up for BallsPi, the first target device); also the demo device in the app |
 | `store/` | App Store and Google Play icons, screenshots and listing text |
 

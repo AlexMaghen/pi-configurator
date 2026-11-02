@@ -11,3 +11,5 @@ nodeLinker: hoisted
 # Packages allowed to run install scripts.
 allowBuilds:
   esbuild: true
+  # Fetches the Bun binary that compiles apps/build-pifig-sd.
+  bun: true

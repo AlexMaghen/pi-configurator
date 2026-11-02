@@ -1,0 +1,24 @@
+{
+  "name": "build-pifig-sd",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sets up pi-configurator on a Raspberry Pi OS SD card from a Mac or PC, so it installs itself on first boot with no network.",
+  "type": "module",
+  "scripts": {
+    "start": "bun src/main.ts",
+    "bundle": "./scripts/build-bundle.sh",
+    "build": "./scripts/compile.sh",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@pi-configurator/protocol": "workspace:*",
+    "yaml": "^2.8.1"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.4",
+    "bun": "^1.4.4",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  }
+}

@@ -8,6 +8,11 @@
 #                   config-template/config.json
 #   --reader USER   add USER to the pi-configurator group so its programs can read the store
 #                   (/var/lib/pi-configurator/values.json); repeatable
+#   --venv-archive FILE
+#                   offline install: unpack this prebuilt Python environment (a .tar.gz of
+#                   /opt/pi-configurator/venv, made by apps/build-pifig-sd) instead of
+#                   installing packages with apt and pip. bluez, network-manager and python3
+#                   must already be there, as they are on Raspberry Pi OS
 #
 # Safe to run again: it only creates what is missing, reinstalls the Python packages from this
 # checkout, and restarts the service when the config is valid. It never deletes anything.
@@ -26,12 +31,14 @@ GROUP=pi-configurator
 UNIT=pi-configurator.service
 
 config_src="$REPO/config-template/config.json"
+venv_archive=""
 readers=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --config) config_src="$2"; shift 2 ;;
     --reader) readers+=("$2"); shift 2 ;;
-    -h|--help) sed -n '2,17p' "$0"; exit 0 ;;
+    --venv-archive) venv_archive="$2"; shift 2 ;;
+    -h|--help) sed -n '2,22p' "$0"; exit 0 ;;
     *) echo "unknown option: $1" >&2; exit 64 ;;
   esac
 done
@@ -46,8 +53,21 @@ step() { printf '\n==> %s\n' "$*"; }
 step "System packages"
 # bluez: the Bluetooth stack (GATT server, advertising). network-manager: Wi-Fi (default on
 # Trixie). python3-venv: the service's virtual environment.
-apt-get update -qq
-apt-get install -y --no-install-recommends bluez network-manager python3 python3-venv
+if [[ -n "$venv_archive" ]]; then
+  # Offline: nothing can be downloaded, so only check what Raspberry Pi OS already has.
+  missing=()
+  command -v bluetoothctl >/dev/null || missing+=(bluez)
+  command -v nmcli >/dev/null || missing+=(network-manager)
+  command -v python3 >/dev/null || missing+=(python3)
+  if [[ ${#missing[@]} -gt 0 ]]; then
+    echo "missing on this system: ${missing[*]} (an offline install can't download them)" >&2
+    exit 1
+  fi
+  echo "offline: using the installed bluez, network-manager and python3"
+else
+  apt-get update -qq
+  apt-get install -y --no-install-recommends bluez network-manager python3 python3-venv
+fi
 
 step "Group $GROUP"
 if ! getent group "$GROUP" >/dev/null; then
@@ -60,7 +80,12 @@ done
 
 step "Python packages in $VENV"
 install -d -m 0755 "$PREFIX"
-if command -v uv >/dev/null 2>&1; then
+if [[ -n "$venv_archive" ]]; then
+  # The archive holds venv/ built for /opt/pi-configurator, so its paths are already right.
+  rm -rf "$VENV"
+  tar -xzf "$venv_archive" -C "$PREFIX"
+  "$VENV/bin/python" -c 'import pi_configurator' # fails here if the Python version doesn't match
+elif command -v uv >/dev/null 2>&1; then
   [[ -x "$VENV/bin/python" ]] || uv venv --python python3 "$VENV"
   uv pip install --python "$VENV/bin/python" --reinstall-package pi-configurator \
     --reinstall-package pi-configurator-client "$REPO/python/service" "$REPO/python/client"

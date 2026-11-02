@@ -42,6 +42,13 @@ What `install.sh` does (safe to run again; never deletes or overwrites a config)
 Updating: run the `curl ... | sudo bash` line again (or `git pull && sudo ./deploy/install.sh` in a
 checkout).
 
+## Offline install
+
+`install.sh --venv-archive FILE` installs without a network: it skips apt and pip, checks
+that bluez, network-manager and python3 are already there (they are on Raspberry Pi OS), and
+unpacks a prebuilt `/opt/pi-configurator/venv`. This is what a card set up with
+[build-pifig-sd](../apps/build-pifig-sd/README.md) runs on its first boot.
+
 ## Reading settings from another program
 
 ```python

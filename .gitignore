@@ -33,3 +33,6 @@ build/
 
 # Output of deploy/test/run.sh
 deploy/test/out/
+
+# build-pifig-sd: the bundle and the compiled programs are built (pnpm bundle, pnpm build)
+apps/build-pifig-sd/bundle/

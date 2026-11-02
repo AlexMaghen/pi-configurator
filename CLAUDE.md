@@ -11,5 +11,7 @@ using one generic app that draws its form from a settings description the device
   run `pnpm generate`, then update the Python side until it passes `packages/protocol/test-vectors/`.
 - Pi side: Python (uv workspace in `python/`), on BlueZ and NetworkManager.
 - Phone side: Expo in `apps/mobile`, iPhone first, Android-ready.
+- SD-card setup from a Mac or PC: `apps/build-pifig-sd` (TypeScript, compiled with Bun), which
+  copies a prebuilt offline bundle onto the boot drive and installs it on first boot via cloud-init.
 - The owner's global rules apply where they fit; the owner allowed departures the project needs
   (Python inside the monorepo, no web backend stack).
