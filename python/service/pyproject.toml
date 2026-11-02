@@ -1,0 +1,22 @@
+[project]
+name = "pi-configurator"
+version = "0.1.0"
+description = "pi-configurator service: set up a Raspberry Pi over Bluetooth LE from a phone"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.9",
+    "cryptography>=43",
+    # D-Bus client/server for BlueZ (GATT, advertising) and NetworkManager. Pure Python
+    # fallback, so it installs (and type-checks) on macOS too; only used at runtime on Linux.
+    "dbus-fast>=4.0",  # 4.0: Annotated D-Bus signatures
+]
+
+[project.scripts]
+pi-configurator = "pi_configurator.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pi_configurator"]

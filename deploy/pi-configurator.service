@@ -1,0 +1,24 @@
+# pi-configurator: set up this Pi over Bluetooth LE from the pi-configurator app.
+# Installed by deploy/install.sh to /etc/systemd/system/. Logs: journalctl -u pi-configurator -f
+#
+# Runs as root in v1: it drives BlueZ and NetworkManager, runs hostnamectl/timedatectl and
+# restarts other units. (Later: a dedicated user with polkit rules.)
+
+[Unit]
+Description=pi-configurator Bluetooth LE setup service
+Documentation=https://github.com/AlexMaghen/pi-configurator
+Wants=bluetooth.service NetworkManager.service
+After=bluetooth.service NetworkManager.service dbus.service
+
+[Service]
+Type=simple
+ExecStart=/opt/pi-configurator/venv/bin/pi-configurator run
+Environment=PYTHONUNBUFFERED=1
+Restart=on-failure
+RestartSec=5s
+# Exit status 2 means config.json is invalid: restarting would only fail again.
+# Fix the file (see `pi-configurator check`), then `systemctl restart pi-configurator`.
+RestartPreventExitStatus=2
+
+[Install]
+WantedBy=multi-user.target

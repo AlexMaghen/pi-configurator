@@ -1,0 +1,32 @@
+# Node / pnpm / turbo
+node_modules/
+.turbo/
+dist/
+*.tsbuildinfo
+
+# Expo
+.expo/
+apps/mobile/ios/
+apps/mobile/android/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Python / uv
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+build/
+*.egg-info/
+
+# Local env files (the owner's rules use .env.development / .env.production)
+.env
+.env.*
+!.env.example
+
+# macOS / editors
+.DS_Store

@@ -1,0 +1,38 @@
+{
+  "description": "Keys are HKDF-SHA256(K, empty salt, info, 32). Messages are AES-256-GCM with nonce = 4 zero bytes | uint64 BE counter, AAD 'pi-configurator/1', output ciphertext | tag. Counters start at 0 per direction.",
+  "K": "98eecfc9707dc0ee8d7baec4499261e3e72d073481733543e180fd47d4bc037a9ccfd4acee60b990372c55fc2c89a4d5ca8f01118703d6317de5823b0d701f90",
+  "keys": {
+    "phoneToPi": {
+      "info": "pi-configurator/1 phone->pi",
+      "key": "41a1e1a4b5b5b8dd7750b9d8f29c6d78856f83cf375a52f827798b270db83912"
+    },
+    "piToPhone": {
+      "info": "pi-configurator/1 pi->phone",
+      "key": "b207e459c3e542c600df806c382c6a7f403f117a8161e7ae61449a5571bfb028"
+    }
+  },
+  "phoneToPi": [
+    {
+      "counter": 0,
+      "plaintext": "{\"id\":3,\"method\":\"settings.describe\",\"params\":{}}",
+      "sealed": "583fa69d3c49fc282017fefdbadc5b2e922dd3f93211f4163ee0e0b64f8c29c469194df6aedb6e6c100c488538c062e05d95951021e517ec48c7f278ce2a2b79ea"
+    },
+    {
+      "counter": 1,
+      "plaintext": "{\"id\":4,\"method\":\"settings.get\",\"params\":{}}",
+      "sealed": "c004488f067bbb58ece943b41bbbc1f3477a343f462ae520d369256bc174e3e9ea97543f22bd2febfcadc3331784d1b96a8a4506c02311a8ee873914"
+    }
+  ],
+  "piToPhone": [
+    {
+      "counter": 0,
+      "plaintext": "{\"id\":3,\"result\":{\"fields\":[]}}",
+      "sealed": "94e556a825be76495969ea88babd2b818af3804b0b8d369a93eb15f2ad77b6d168b7a29de2bbeb87af3294eb14c4ba"
+    },
+    {
+      "counter": 1,
+      "plaintext": "{\"event\":\"status\",\"kind\":\"store.saved\",\"message\":\"Saved\"}",
+      "sealed": "0ab8d60517f1abc4f0d31ec18254dbca1448c439d983a20b0416ca9b5c66c7f0f6dca3f39c8a6df3d73d7328554969f05613d881fdfc58a41df9be363ad318ed6ad4b2000bd6aacd26"
+    }
+  ]
+}

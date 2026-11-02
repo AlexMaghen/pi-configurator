@@ -1,0 +1,16 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "tasks": {
+    "generate": {
+      "dependsOn": ["^generate"],
+      "outputs": ["json-schema/**", "test-vectors/**", "service/src/pi_configurator/protocol/config_models.py"]
+    },
+    "typecheck": {
+      "dependsOn": ["^generate"]
+    },
+    "test": {
+      "dependsOn": ["^generate"]
+    },
+    "lint": {}
+  }
+}

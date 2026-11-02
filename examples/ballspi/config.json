@@ -1,0 +1,225 @@
+{
+  "version": 1,
+  "bluetooth": {
+    "name": "BallsPi"
+  },
+  "access": {
+    "password": "change-me-1234"
+  },
+  "permissions": {
+    "allowReboot": true,
+    "allowAccessChanges": false
+  },
+  "export": {
+    "envFile": "/var/lib/pi-configurator/ballspi.env"
+  },
+  "settings": [
+    {
+      "key": "wifi",
+      "label": "Wi-Fi network",
+      "group": "Network",
+      "type": "wifi",
+      "target": {
+        "system": "wifi"
+      }
+    },
+    {
+      "key": "hostname",
+      "label": "Device hostname",
+      "help": "The name the Pi uses on the network (hostname.local).",
+      "group": "Network",
+      "type": "string",
+      "pattern": "^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$",
+      "default": "ballspi",
+      "target": {
+        "system": "hostname"
+      }
+    },
+    {
+      "key": "timezone",
+      "label": "Time zone",
+      "group": "Network",
+      "type": "select",
+      "default": "America/Los_Angeles",
+      "target": {
+        "system": "timezone"
+      }
+    },
+    {
+      "key": "BALLS_NAME",
+      "label": "HomeKit name",
+      "group": "Balls",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "default": "Ballsey",
+      "target": {
+        "store": true
+      },
+      "onChange": {
+        "restart": [
+          "balls.service"
+        ]
+      }
+    },
+    {
+      "key": "BALLS_OPEN_DOOR_LEAD_SECONDS",
+      "label": "Door lead time (open)",
+      "group": "Balls",
+      "type": "number",
+      "min": 0,
+      "max": 60,
+      "step": 0.5,
+      "unit": "s",
+      "default": 5,
+      "target": {
+        "store": true
+      },
+      "onChange": {
+        "restart": [
+          "balls.service"
+        ]
+      }
+    },
+    {
+      "key": "BALLS_OPEN_FINISH_SECONDS",
+      "label": "Open finish time",
+      "group": "Balls",
+      "type": "number",
+      "min": 0,
+      "max": 120,
+      "step": 0.5,
+      "unit": "s",
+      "default": 20,
+      "target": {
+        "store": true
+      },
+      "onChange": {
+        "restart": [
+          "balls.service"
+        ]
+      }
+    },
+    {
+      "key": "BALLS_CLOSE_TRACK_LEAD_SECONDS",
+      "label": "Track lead time (close)",
+      "group": "Balls",
+      "type": "number",
+      "min": 0,
+      "max": 60,
+      "step": 0.5,
+      "unit": "s",
+      "default": 4,
+      "target": {
+        "store": true
+      },
+      "onChange": {
+        "restart": [
+          "balls.service"
+        ]
+      }
+    },
+    {
+      "key": "BALLS_CLOSE_FINISH_SECONDS",
+      "label": "Close finish time",
+      "group": "Balls",
+      "type": "number",
+      "min": 0,
+      "max": 120,
+      "step": 0.5,
+      "unit": "s",
+      "default": 20,
+      "target": {
+        "store": true
+      },
+      "onChange": {
+        "restart": [
+          "balls.service"
+        ]
+      }
+    },
+    {
+      "key": "BALLS_HOME_ON_START",
+      "label": "Home on start",
+      "help": "Move the mechanism to its home position when the service starts.",
+      "group": "Balls",
+      "type": "boolean",
+      "default": true,
+      "target": {
+        "store": true
+      },
+      "onChange": {
+        "restart": [
+          "balls.service"
+        ]
+      }
+    },
+    {
+      "key": "PLAYSTREAM_NAME",
+      "label": "HomeKit name",
+      "group": "PlayStream",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "default": "PlayStream",
+      "target": {
+        "store": true
+      },
+      "onChange": {
+        "restart": [
+          "playstream.service"
+        ]
+      }
+    },
+    {
+      "key": "PLAYSTREAM_STREAM_URL",
+      "label": "Stream URL",
+      "group": "PlayStream",
+      "type": "string",
+      "format": "url",
+      "default": "http://streaming.live365.com/a21442",
+      "target": {
+        "store": true
+      },
+      "onChange": {
+        "restart": [
+          "playstream.service"
+        ]
+      }
+    },
+    {
+      "key": "HK_LOG_LEVEL",
+      "label": "Log level",
+      "group": "Advanced",
+      "type": "select",
+      "options": [
+        {
+          "value": "DEBUG",
+          "label": "Debug"
+        },
+        {
+          "value": "INFO",
+          "label": "Info"
+        },
+        {
+          "value": "WARNING",
+          "label": "Warning"
+        },
+        {
+          "value": "ERROR",
+          "label": "Error"
+        }
+      ],
+      "default": "INFO",
+      "target": {
+        "store": true
+      },
+      "onChange": {
+        "restart": [
+          "balls.service",
+          "playstream.service"
+        ]
+      }
+    }
+  ]
+}

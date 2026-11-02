@@ -1,0 +1,1313 @@
+{
+  "title": "pi-configurator RPC",
+  "protocol": 1,
+  "deviceInfo": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "protocol": {
+        "type": "integer",
+        "minimum": -9007199254740991,
+        "maximum": 9007199254740991
+      },
+      "name": {
+        "type": "string"
+      },
+      "model": {
+        "type": "string"
+      },
+      "serviceVersion": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "protocol",
+      "name",
+      "serviceVersion"
+    ],
+    "additionalProperties": false
+  },
+  "request": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 65535
+      },
+      "method": {
+        "type": "string",
+        "enum": [
+          "auth.start",
+          "auth.finish",
+          "settings.describe",
+          "settings.get",
+          "settings.set",
+          "wifi.scan",
+          "system.reboot",
+          "access.setPassword",
+          "access.setName"
+        ]
+      },
+      "params": {
+        "default": {},
+        "type": "object",
+        "propertyNames": {
+          "type": "string"
+        },
+        "additionalProperties": {}
+      }
+    },
+    "required": [
+      "id",
+      "method"
+    ]
+  },
+  "response": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "anyOf": [
+      {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "bad_request",
+                  "unknown_method",
+                  "invalid_params",
+                  "unauthenticated",
+                  "auth_failed",
+                  "rate_limited",
+                  "forbidden",
+                  "busy",
+                  "internal"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "details": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "id",
+          "error"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "result": {}
+        },
+        "required": [
+          "id",
+          "result"
+        ],
+        "additionalProperties": false
+      }
+    ]
+  },
+  "statusEvent": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "event": {
+        "type": "string",
+        "const": "status"
+      },
+      "kind": {
+        "type": "string",
+        "enum": [
+          "wifi.connecting",
+          "wifi.connected",
+          "wifi.failed",
+          "hostname.changed",
+          "timezone.changed",
+          "store.saved",
+          "service.restarting",
+          "service.restarted",
+          "service.failed",
+          "system.rebooting",
+          "session.ending"
+        ]
+      },
+      "message": {
+        "type": "string"
+      },
+      "key": {
+        "type": "string"
+      },
+      "unit": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "event",
+      "kind",
+      "message"
+    ],
+    "additionalProperties": false
+  },
+  "methods": {
+    "auth.start": {
+      "auth": false,
+      "params": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "A": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9+/]*={0,2}$"
+          }
+        },
+        "required": [
+          "A"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "salt": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9+/]*={0,2}$"
+          },
+          "B": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9+/]*={0,2}$"
+          }
+        },
+        "required": [
+          "salt",
+          "B"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "auth.finish": {
+      "auth": false,
+      "params": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "M1": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9+/]*={0,2}$"
+          }
+        },
+        "required": [
+          "M1"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "M2": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9+/]*={0,2}$"
+          },
+          "idleTimeoutS": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "M2",
+          "idleTimeoutS"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "settings.describe": {
+      "auth": true,
+      "params": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "result": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "fields": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z_][A-Za-z0-9_.-]{0,63}$"
+                    },
+                    "label": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "group": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "help": {
+                      "type": "string"
+                    },
+                    "readOnly": {
+                      "type": "boolean"
+                    },
+                    "onChange": {
+                      "type": "object",
+                      "properties": {
+                        "restart": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z0-9:_.@-]+\\.(service|target|socket|timer)$"
+                          }
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "target": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "store": {
+                              "type": "boolean",
+                              "const": true
+                            }
+                          },
+                          "required": [
+                            "store"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "system": {
+                              "type": "string",
+                              "enum": [
+                                "wifi",
+                                "hostname",
+                                "timezone"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "system"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    "type": {
+                      "type": "string",
+                      "const": "string"
+                    },
+                    "default": {
+                      "type": "string"
+                    },
+                    "secret": {
+                      "type": "boolean"
+                    },
+                    "pattern": {
+                      "type": "string"
+                    },
+                    "format": {
+                      "type": "string",
+                      "enum": [
+                        "url",
+                        "email",
+                        "multiline"
+                      ]
+                    },
+                    "minLength": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "maxLength": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "key",
+                    "label",
+                    "target",
+                    "type"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z_][A-Za-z0-9_.-]{0,63}$"
+                    },
+                    "label": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "group": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "help": {
+                      "type": "string"
+                    },
+                    "readOnly": {
+                      "type": "boolean"
+                    },
+                    "onChange": {
+                      "type": "object",
+                      "properties": {
+                        "restart": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z0-9:_.@-]+\\.(service|target|socket|timer)$"
+                          }
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "target": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "store": {
+                              "type": "boolean",
+                              "const": true
+                            }
+                          },
+                          "required": [
+                            "store"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "system": {
+                              "type": "string",
+                              "enum": [
+                                "wifi",
+                                "hostname",
+                                "timezone"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "system"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    "type": {
+                      "type": "string",
+                      "const": "integer"
+                    },
+                    "default": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "min": {
+                      "type": "number"
+                    },
+                    "max": {
+                      "type": "number"
+                    },
+                    "step": {
+                      "type": "number",
+                      "exclusiveMinimum": 0
+                    },
+                    "unit": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "key",
+                    "label",
+                    "target",
+                    "type"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z_][A-Za-z0-9_.-]{0,63}$"
+                    },
+                    "label": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "group": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "help": {
+                      "type": "string"
+                    },
+                    "readOnly": {
+                      "type": "boolean"
+                    },
+                    "onChange": {
+                      "type": "object",
+                      "properties": {
+                        "restart": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z0-9:_.@-]+\\.(service|target|socket|timer)$"
+                          }
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "target": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "store": {
+                              "type": "boolean",
+                              "const": true
+                            }
+                          },
+                          "required": [
+                            "store"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "system": {
+                              "type": "string",
+                              "enum": [
+                                "wifi",
+                                "hostname",
+                                "timezone"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "system"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    "type": {
+                      "type": "string",
+                      "const": "number"
+                    },
+                    "default": {
+                      "type": "number"
+                    },
+                    "min": {
+                      "type": "number"
+                    },
+                    "max": {
+                      "type": "number"
+                    },
+                    "step": {
+                      "type": "number",
+                      "exclusiveMinimum": 0
+                    },
+                    "unit": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "key",
+                    "label",
+                    "target",
+                    "type"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z_][A-Za-z0-9_.-]{0,63}$"
+                    },
+                    "label": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "group": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "help": {
+                      "type": "string"
+                    },
+                    "readOnly": {
+                      "type": "boolean"
+                    },
+                    "onChange": {
+                      "type": "object",
+                      "properties": {
+                        "restart": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z0-9:_.@-]+\\.(service|target|socket|timer)$"
+                          }
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "target": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "store": {
+                              "type": "boolean",
+                              "const": true
+                            }
+                          },
+                          "required": [
+                            "store"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "system": {
+                              "type": "string",
+                              "enum": [
+                                "wifi",
+                                "hostname",
+                                "timezone"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "system"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    "type": {
+                      "type": "string",
+                      "const": "boolean"
+                    },
+                    "default": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "key",
+                    "label",
+                    "target",
+                    "type"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z_][A-Za-z0-9_.-]{0,63}$"
+                    },
+                    "label": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "group": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "help": {
+                      "type": "string"
+                    },
+                    "readOnly": {
+                      "type": "boolean"
+                    },
+                    "onChange": {
+                      "type": "object",
+                      "properties": {
+                        "restart": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z0-9:_.@-]+\\.(service|target|socket|timer)$"
+                          }
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "target": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "store": {
+                              "type": "boolean",
+                              "const": true
+                            }
+                          },
+                          "required": [
+                            "store"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "system": {
+                              "type": "string",
+                              "enum": [
+                                "wifi",
+                                "hostname",
+                                "timezone"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "system"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    "type": {
+                      "type": "string",
+                      "const": "select"
+                    },
+                    "default": {
+                      "type": "string"
+                    },
+                    "options": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "value": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "required": [
+                          "value",
+                          "label"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "key",
+                    "label",
+                    "target",
+                    "type"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z_][A-Za-z0-9_.-]{0,63}$"
+                    },
+                    "label": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "group": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "help": {
+                      "type": "string"
+                    },
+                    "readOnly": {
+                      "type": "boolean"
+                    },
+                    "onChange": {
+                      "type": "object",
+                      "properties": {
+                        "restart": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z0-9:_.@-]+\\.(service|target|socket|timer)$"
+                          }
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "target": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "store": {
+                              "type": "boolean",
+                              "const": true
+                            }
+                          },
+                          "required": [
+                            "store"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "system": {
+                              "type": "string",
+                              "enum": [
+                                "wifi",
+                                "hostname",
+                                "timezone"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "system"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    "type": {
+                      "type": "string",
+                      "const": "wifi"
+                    },
+                    "default": {
+                      "type": "object",
+                      "properties": {
+                        "ssid": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "password": {
+                          "type": "string"
+                        },
+                        "hidden": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "ssid"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "key",
+                    "label",
+                    "target",
+                    "type"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          },
+          "permissions": {
+            "type": "object",
+            "properties": {
+              "allowReboot": {
+                "default": false,
+                "type": "boolean"
+              },
+              "allowAccessChanges": {
+                "default": false,
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "allowReboot",
+              "allowAccessChanges"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "fields",
+          "permissions"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "settings.get": {
+      "auth": true,
+      "params": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "keys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "result": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "values": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "secret": {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    "value": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "ssid": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "password": {
+                                  "type": "string"
+                                },
+                                "hidden": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "ssid"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "source": {
+                      "type": "string",
+                      "enum": [
+                        "saved",
+                        "default",
+                        "system",
+                        "none"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "secret",
+                    "value",
+                    "source"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "secret": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "set": {
+                      "type": "boolean"
+                    },
+                    "source": {
+                      "type": "string",
+                      "enum": [
+                        "saved",
+                        "default",
+                        "system",
+                        "none"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "secret",
+                    "set",
+                    "source"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "secret": {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    "value": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "ssid": {
+                              "type": "string"
+                            },
+                            "connected": {
+                              "type": "boolean"
+                            },
+                            "ipv4": {
+                              "type": "string"
+                            },
+                            "signal": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 100
+                            }
+                          },
+                          "required": [
+                            "ssid",
+                            "connected"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "source": {
+                      "type": "string",
+                      "enum": [
+                        "saved",
+                        "default",
+                        "system",
+                        "none"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "secret",
+                    "value",
+                    "source"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          }
+        },
+        "required": [
+          "values"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "settings.set": {
+      "auth": true,
+      "params": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "values": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "ssid": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "password": {
+                          "type": "string"
+                        },
+                        "hidden": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "ssid"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "required": [
+          "values"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "const": true
+                    }
+                  },
+                  "required": [
+                    "ok"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          },
+          "restarted": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "results",
+          "restarted"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "wifi.scan": {
+      "auth": true,
+      "params": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "result": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "networks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "ssid": {
+                  "type": "string"
+                },
+                "signal": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "security": {
+                  "type": "string",
+                  "enum": [
+                    "open",
+                    "wep",
+                    "wpa",
+                    "wpa2",
+                    "wpa3",
+                    "enterprise"
+                  ]
+                },
+                "inUse": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "ssid",
+                "signal",
+                "security",
+                "inUse"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "networks"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "system.reboot": {
+      "auth": true,
+      "params": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "result": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "rebooting": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "rebooting"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "access.setPassword": {
+      "auth": true,
+      "params": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "password"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    "access.setName": {
+      "auth": true,
+      "params": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    }
+  }
+}

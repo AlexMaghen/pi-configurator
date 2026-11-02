@@ -1,0 +1,13 @@
+[project]
+name = "pi-configurator-client"
+version = "0.1.0"
+description = "Read settings saved by the pi-configurator service (no dependencies)"
+requires-python = ">=3.12"
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pi_configurator_client"]

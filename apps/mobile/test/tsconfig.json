@@ -1,0 +1,8 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "include": ["./**/*.ts", "../vitest.config.mts", "../src/**/*.ts", "../src/**/*.tsx", "../types/**/*.d.ts"],
+  "exclude": []
+}

@@ -1,0 +1,58 @@
+# pi-configurator Python side: uv workspace root.
+# service/ is the systemd service on the Pi (BLE, RPC, system handlers); client/ is the small
+# store reader other programs on the Pi use. Both are tested from tests/ against the shared
+# contract in ../packages/protocol (JSON Schema + test vectors).
+
+[project]
+name = "pi-configurator-workspace"
+version = "0.1.0"
+description = "pi-configurator Python workspace (service + client)"
+requires-python = ">=3.12"
+dependencies = ["pi-configurator", "pi-configurator-client"]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["service", "client"]
+
+[tool.uv.sources]
+pi-configurator = { workspace = true }
+pi-configurator-client = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.25",
+    "ruff>=0.8",
+    "pyright>=1.1.390",
+    # Generates pi_configurator/protocol/config_models.py from the shared JSON Schema.
+    "datamodel-code-generator>=0.26",
+    # Checks the service's RPC output against ../packages/protocol/json-schema/rpc.schema.json.
+    "jsonschema>=4.23",
+    "types-jsonschema>=4.23",
+    # fields-from-pydantic is tested against a pydantic-settings class like BallsPi's.
+    "pydantic-settings>=2.6",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["service/src/pi_configurator/protocol/config_models.py"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+# SRP names (A, B, M1, K) are uppercase like in the RFC, which the Yoda check misreads.
+"tests/*" = ["SIM300"]
+
+[tool.pyright]
+include = ["service/src", "client/src", "tests"]
+pythonVersion = "3.12"
+typeCheckingMode = "strict"

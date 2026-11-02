@@ -1,0 +1,16 @@
+{
+  "name": "@pi-configurator/python",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Python side (uv workspace): pi-configurator service and client. Wrapped so turbo runs its tasks.",
+  "scripts": {
+    "generate": "uv run --frozen python scripts/generate_models.py",
+    "test": "uv run --frozen pytest",
+    "typecheck": "uv run --frozen pyright",
+    "lint": "uv run --frozen ruff check . && uv run --frozen ruff format --check .",
+    "check-generated": "uv run --frozen python scripts/generate_models.py --check"
+  },
+  "devDependencies": {
+    "@pi-configurator/protocol": "workspace:*"
+  }
+}
