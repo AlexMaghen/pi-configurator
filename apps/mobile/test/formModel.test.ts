@@ -15,6 +15,7 @@ import {
   resolveDraft,
   sourceLabel,
 } from "../src/lib/form/model";
+import { detailsText } from "../src/lib/format/details";
 import { formatNumber, parseNumber, percentBars, rssiBars } from "../src/lib/format/numbers";
 import { SECRET_FIELD, pick, testConfig } from "./support";
 
@@ -149,5 +150,17 @@ describe("drafts", () => {
     expect(limitsText(num)).toBe(`${formatNumber(num.min!)} – ${formatNumber(num.max!)} ${num.unit} · steps of ${num.step}`);
     expect(limitsText(hostname)).toBeUndefined();
     expect(sourceLabel(plain(1, "default"))).toBe("Default");
+  });
+});
+
+describe("device data text", () => {
+  it("lays the report out as plain text for the clipboard", () => {
+    const text = detailsText("Crapula", [
+      { title: "Hardware", items: [{ label: "Model", value: "Raspberry Pi 4 Model B Rev 1.5" }] },
+      { title: "Network", items: [{ label: "Signal", value: "86%" }, { label: "DNS", value: "192.168.4.1" }] },
+    ]);
+    expect(text).toBe(
+      "Device data: Crapula\n\nHARDWARE\nModel: Raspberry Pi 4 Model B Rev 1.5\n\nNETWORK\nSignal: 86%\nDNS: 192.168.4.1\n",
+    );
   });
 });

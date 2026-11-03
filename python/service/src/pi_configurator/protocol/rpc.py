@@ -24,6 +24,7 @@ MethodName = Literal[
     "settings.get",
     "settings.set",
     "wifi.scan",
+    "system.details",
     "system.reboot",
     "access.setPassword",
     "access.setName",

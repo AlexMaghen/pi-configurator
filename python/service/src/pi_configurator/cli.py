@@ -130,6 +130,7 @@ def cmd_fields(args: argparse.Namespace) -> int:
 async def _run(paths: Paths) -> int:
     from .core.service import Service
     from .system.commands import Hostname, Systemd, Timezone
+    from .system.details import DeviceDetails
     from .system.interfaces import SystemAdapters
     from .system.networkmanager import NetworkManagerWifi
 
@@ -146,6 +147,7 @@ async def _run(paths: Paths) -> int:
         hostname=Hostname(paths.hosts),
         timezone=Timezone(),
         systemd=Systemd(),
+        details=DeviceDetails(),
     )
     service = Service(config, paths, system)
     service.warn_about_password()

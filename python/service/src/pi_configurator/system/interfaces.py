@@ -98,9 +98,18 @@ class SystemdAdapter(Protocol):
     async def reboot(self) -> None: ...
 
 
+class DetailsAdapter(Protocol):
+    async def collect(self, bluetooth_name: str, settings_count: int) -> JsonObject:
+        """The `system.details` result: {"sections": [{"title", "items": [{"label", "value"}]}]}."""
+        ...
+
+
 @dataclass(slots=True)
 class SystemAdapters:
     wifi: WifiAdapter
     hostname: HostnameAdapter
     timezone: TimezoneAdapter
     systemd: SystemdAdapter
+    #: Optional so tests and other platforms can leave it out; `system.details` then reports
+    #: only the service section.
+    details: DetailsAdapter | None = None

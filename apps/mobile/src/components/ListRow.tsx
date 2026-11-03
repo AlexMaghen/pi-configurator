@@ -31,12 +31,14 @@ export function ListRow(props: ListRowProps) {
   const content = (pressed: boolean) => (
     <View style={[s.row, pressed && s.rowPressed]}>
       {leading ?? (icon ? <Icon name={icon} color={danger ? colors.danger : colors.accent} /> : null)}
-      <View style={s.rowText}>
+      {/* With a value, the title keeps its natural width and the value takes the rest,
+          wrapping onto a second line (e.g. a long model name) instead of squeezing the title. */}
+      <View style={value ? s.rowTextBeside : s.rowText}>
         <Text style={danger ? s.rowTitleDanger : s.rowTitle}>{title}</Text>
         {subtitle ? <Text style={s.rowSubtitle}>{subtitle}</Text> : null}
       </View>
       {value ? (
-        <Text style={s.rowValue} numberOfLines={1}>
+        <Text style={s.rowValue} numberOfLines={2}>
           {value}
         </Text>
       ) : null}

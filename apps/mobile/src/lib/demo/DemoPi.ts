@@ -264,6 +264,50 @@ export class DemoPi {
         return {
           networks: FAKE_NETWORKS.map(({ failWith: _f, ...n }) => ({ ...n, inUse: this.wifi?.ssid === n.ssid })),
         };
+      case "system.details":
+        // Shaped like a real Raspberry Pi 4's report, so the Device Data sheet can be tried.
+        return {
+          sections: [
+            {
+              title: "Hardware",
+              items: [
+                { label: "Model", value: this.options.model ?? "Raspberry Pi" },
+                { label: "Serial number", value: "10000000demo0001" },
+                { label: "Processor", value: "BCM2711, 4 cores, up to 1.8 GHz" },
+                { label: "CPU temperature", value: "46.2 °C" },
+                { label: "Throttling", value: "No (power and temperature have been fine since boot)" },
+                { label: "Memory", value: "3.7 GB, 3.1 GB available" },
+                { label: "Storage", value: "29.1 GB, 22.4 GB free" },
+              ],
+            },
+            {
+              title: "Operating system",
+              items: [
+                { label: "Operating system", value: "Debian GNU/Linux 13 (trixie)" },
+                { label: "Kernel", value: "6.18.50+rpt-rpi-v8" },
+                { label: "Hostname", value: this.hostname },
+                { label: "Uptime", value: "2 days, 4 h 12 min" },
+              ],
+            },
+            {
+              title: "Network",
+              items: [
+                { label: "Wi-Fi network", value: this.wifi?.ssid ?? "Not connected" },
+                { label: "Signal", value: "78%" },
+                { label: "Band and channel", value: "5 GHz, channel 36 (5180 MHz)" },
+                { label: "IPv4 address", value: "192.168.1.40/24" },
+              ],
+            },
+            {
+              title: "Bluetooth",
+              items: [
+                { label: "Advertised name", value: this.name },
+                { label: "BlueZ", value: "5.82" },
+              ],
+            },
+            { title: "pi-configurator", items: [{ label: "Version", value: "demo" }] },
+          ],
+        };
       case "system.reboot": {
         if (!permissions.allowReboot) throw new RpcFailure("forbidden", "Reboot is turned off for this device");
         await conn.notify(this.status("system.rebooting", "Rebooting"));

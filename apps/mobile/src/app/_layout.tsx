@@ -10,6 +10,7 @@
  *   /device/[id]/choose/[key]         Pick a value for a select field (searchable)
  *   /device/[id]/wifi                 Current connection and the Pi's Wi-Fi scan
  *   /device/[id]/wifi-join            Join one network (or a hidden one)
+ *   /device/[id]/details              Device Data: the Pi's hardware / OS / network report (sheet)
  *   /device/[id]/activity             Status events from the Pi
  *   /device/[id]/password             Change the device password
  *   /device/[id]/rename               Change the Bluetooth name
@@ -58,6 +59,7 @@ export default function RootLayout() {
             <Stack.Screen name="device/[id]/choose/[key]" options={{ title: "Choose" }} />
             <Stack.Screen name="device/[id]/wifi" options={{ title: "Wi-Fi" }} />
             <Stack.Screen name="device/[id]/wifi-join" options={{ title: "Join network" }} />
+            <Stack.Screen name="device/[id]/details" options={{ title: "Device Data", presentation: "modal" }} />
             <Stack.Screen name="device/[id]/activity" options={{ title: "Activity" }} />
             <Stack.Screen name="device/[id]/password" options={{ title: "Change password" }} />
             <Stack.Screen name="device/[id]/rename" options={{ title: "Rename device" }} />

@@ -30,7 +30,9 @@ export function DeviceSections({ id }: { id: string }) {
 
   const { info, permissions } = session;
   const name = info?.name ?? device?.name ?? "Device";
-  const go = (pathname: "/device/[id]/activity" | "/device/[id]/password" | "/device/[id]/rename") =>
+  const go = (
+    pathname: "/device/[id]/details" | "/device/[id]/activity" | "/device/[id]/password" | "/device/[id]/rename",
+  ) =>
     router.push({ pathname, params: { id } });
 
   const reboot = () =>
@@ -70,6 +72,7 @@ export function DeviceSections({ id }: { id: string }) {
           <ListRow title="Demo device" trailing={<Badge label="Demo" color={colors.demo} background={colors.demoSoft} />} />
         ) : null}
         {info?.model ? <ListRow title="Model" value={info.model} /> : null}
+        <ListRow title="Device Data" icon="info" onPress={() => go("/device/[id]/details")} />
         <ListRow title="Service version" value={info?.serviceVersion ?? "Unknown"} />
         <ListRow title="Protocol" value={info ? String(info.protocol) : "Unknown"} />
         <ListRow title="Activity" icon="activity" onPress={() => go("/device/[id]/activity")} />

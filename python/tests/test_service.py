@@ -385,3 +385,16 @@ async def test_disconnect_forgets_connection(world: World) -> None:
     assert not phone.conn.unlocked
     phone.conn.receive(b"\x03\x00\x00\x00\x00\x00")  # ignored after close
     assert phone.inbox == []
+
+
+async def test_device_details(world: World) -> None:
+    phone = await world.unlocked_phone()
+    # No collector in the test world: only the service's own section (checked against the
+    # schema by the phone).
+    report = await phone.result("system.details", {})
+    assert [s["title"] for s in report["sections"]] == ["pi-configurator"]
+    assert {"label": "Bluetooth name", "value": world.service.config.name} in report["sections"][0][
+        "items"
+    ]
+    locked = world.phone()
+    assert (await locked.error("system.details", {}))["code"] == "unauthenticated"

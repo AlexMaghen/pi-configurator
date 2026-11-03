@@ -95,6 +95,12 @@ export const FieldResult = z.union([
 
 const Empty = z.object({}).strict();
 
+/** One line of the device report: "Model" / "Raspberry Pi 4 Model B Rev 1.5". */
+export const DetailItem = z.object({ label: z.string().min(1), value: z.string() });
+/** A titled group of the device report ("Hardware", "Operating system", "Wi-Fi", ...). */
+export const DetailSection = z.object({ title: z.string().min(1), items: z.array(DetailItem) });
+export type DetailSection = z.infer<typeof DetailSection>;
+
 /**
  * Method table. Keys are method names; `auth` says whether a session is required.
  * The service and app both derive their types from this table.
@@ -141,6 +147,16 @@ export const Methods = {
     auth: true,
     params: Empty,
     result: z.object({ networks: z.array(WifiNetwork) }),
+  },
+  /**
+   * A read-only report about the device for support: hardware, operating system, network,
+   * Bluetooth and the service. Sections and lines appear only when the Pi can read them, so the
+   * phone shows whatever comes back, in order.
+   */
+  "system.details": {
+    auth: true,
+    params: Empty,
+    result: z.object({ sections: z.array(DetailSection) }),
   },
   /** Only when `permissions.allowReboot`. The Pi answers, then reboots about 1 s later. */
   "system.reboot": {

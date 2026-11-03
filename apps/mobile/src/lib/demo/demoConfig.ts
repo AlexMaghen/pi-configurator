@@ -10,7 +10,7 @@ import { Config } from "@pi-configurator/protocol";
 import ballspi from "../../../../../config-template/config.json";
 
 export const DEMO_DEVICE_ID = "demo-ballspi";
-export const DEMO_MODEL = "Raspberry Pi 4 Model B";
+export const DEMO_MODEL = "Raspberry Pi 4 Model B Rev 1.5";
 
 /** The template's password; the demo's unlock screen shows it as a hint. */
 export const DEMO_PASSWORD = ballspi.access.password;

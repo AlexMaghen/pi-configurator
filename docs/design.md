@@ -211,6 +211,7 @@ RPC methods (all except the handshake require an unlocked session):
 | `settings.get` | Current values; secret fields come back as `{ "set": true }` |
 | `settings.set` | Change some fields; validated, applied, returns per-field results |
 | `wifi.scan` | Nearby networks (SSID, signal, security) from the Pi's radio; iOS can't list them |
+| `system.details` | Read-only report for support (Device Data in the app): hardware, OS, network, Bluetooth, the service, as titled sections of label / value lines; lines the Pi can't read are left out |
 | `system.reboot` | Reboot the Pi; only if `permissions.allowReboot` |
 | `access.setPassword`, `access.setName` | Change the password or Bluetooth name; only if `permissions.allowAccessChanges` |
 | `status` | Notifications: "Wi-Fi connecting", "connected, IP 192.168.1.40", "restarted studfs-robots" |

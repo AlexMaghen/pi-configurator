@@ -52,13 +52,18 @@ export const useLayoutStyles = createStyles((t) => ({
   },
   rowPressed: { backgroundColor: t.colors.surfaceMuted },
   rowText: { flex: 1, gap: t.space.xxs },
+  /** Title block of a row that also shows a value: never shrinks, so the title never wraps. */
+  rowTextBeside: { flexShrink: 0, maxWidth: "50%", gap: t.space.xxs },
   rowTitle: { fontSize: t.fontSize.body, color: t.colors.text },
   rowTitleDanger: { fontSize: t.fontSize.body, color: t.colors.danger },
   rowSubtitle: { fontSize: t.fontSize.small, color: t.colors.textMuted },
-  rowValue: { fontSize: t.fontSize.body, color: t.colors.textMuted, flexShrink: 1, textAlign: "right" },
+  rowValue: { fontSize: t.fontSize.body, color: t.colors.textMuted, flex: 1, textAlign: "right" },
   /** Header above a full-width list (search field and notes). */
   listHeader: { marginBottom: t.space.md },
   listHeaderBody: { padding: t.space.lg, paddingBottom: 0, gap: t.space.sm },
+  /** The device report's lines (Device Data): "Label: value", one per line, selectable. */
+  detailText: { fontSize: t.fontSize.label, lineHeight: t.fontSize.label * 1.5, color: t.colors.text },
+  detailLabel: { color: t.colors.textMuted },
   /** Hairline between rows, inset to line up with row text. */
   divider: { height: 1, backgroundColor: t.colors.border, marginLeft: t.space.lg, opacity: 0.6 },
   /** Holds a divider in a full-width list so the inset gap shows the row color, not the page. */

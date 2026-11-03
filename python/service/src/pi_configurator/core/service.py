@@ -322,6 +322,9 @@ class Service:
             case "wifi.scan":
                 _parse(EmptyParams, params)
                 return await self._scan()
+            case "system.details":
+                _parse(EmptyParams, params)
+                return await self._details()
             case "system.reboot":
                 _parse(EmptyParams, params)
                 return await self._reboot(conn)
@@ -582,6 +585,17 @@ class Service:
         return {"networks": out}
 
     # -- system and access ---------------------------------------------------------------------
+
+    async def _details(self) -> Json:
+        name, count = self.config.name, len(self.config.fields)
+        if self.system.details is not None:
+            return await self.system.details.collect(name, count)
+        items: list[Json] = [
+            {"label": "Version", "value": __version__},
+            {"label": "Bluetooth name", "value": name},
+            {"label": "Settings in config", "value": f"{count:,}"},
+        ]
+        return {"sections": [{"title": "pi-configurator", "items": items}]}
 
     async def _reboot(self, conn: Connection) -> Json:
         if not self.config.permissions.allow_reboot:
