@@ -6,7 +6,8 @@
 # Makes a debian:trixie arm64 image with what Raspberry Pi OS already has (python3, bluez,
 # network-manager), then runs firstboot.sh from a copy of the bundle at /boot/firmware with the
 # network switched off. systemd can't run in a container, so systemctl is a stub that logs.
-# Checks: the service is installed with the given name and password, result.txt says OK, and
+# Checks: the service is installed with the given name and password, BlueZ's GATT client is
+# off (main.conf [GATT] Client = false), result.txt says OK, and
 # config.json (the plain-text password) and venv.tar.gz are gone from the boot partition.
 set -euo pipefail
 
@@ -25,7 +26,8 @@ X
 boot="$(mktemp -d)"
 trap 'rm -rf "$boot"' EXIT
 cp -R "$APP/bundle" "$boot/pi-configurator"
-# What build-pifig-sd writes: the chosen name and password in the config.
+# What build-pifig-sd writes: the template, with the chosen name and password, as config.json.
+mv "$boot/pi-configurator/config-template" "$boot/pi-configurator/config.json"
 python3 - "$boot/pi-configurator/config.json" <<'X'
 import json, sys
 p = sys.argv[1]; c = json.load(open(p))
@@ -39,6 +41,7 @@ docker run --rm --platform linux/arm64 --network none -v "$boot:/boot/firmware" 
   echo "--- left on the boot partition"; ls /boot/firmware/pi-configurator
   echo "--- installed config"; python3 -c "import json;d=json.load(open(\"/etc/pi-configurator/config.json\"));print(d[\"bluetooth\"][\"name\"], \"|\", d[\"access\"][\"password\"])"
   echo "--- pi in group"; id -nG pi
+  echo "--- bluez GATT client"; awk "/^\[/{s=\$0} /^Client/{print s, \$0}" /etc/bluetooth/main.conf
   echo "--- systemctl"; cat /var/log/systemctl.log
   echo "--- check"; pi-configurator check
 '

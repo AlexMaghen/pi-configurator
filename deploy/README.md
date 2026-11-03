@@ -42,6 +42,14 @@ What `install.sh` does (safe to run again; never deletes or overwrites a config)
 Updating: run the `curl ... | sudo bash` line again (or `git pull && sudo ./deploy/install.sh` in a
 checkout).
 
+## Bluetooth setting the installer changes
+
+`install.sh` sets `Client = false` under `[GATT]` in `/etc/bluetooth/main.conf` and restarts
+Bluetooth. Without it, BlueZ reads a connected iPhone's own GATT services; the iPhone guards
+some of them, so BlueZ starts a pairing that nobody on the Pi can confirm, iOS shows a pairing
+prompt, and the link drops after the 30-second pairing timeout. pi-configurator only serves
+data, so the Pi doesn't need the client role.
+
 ## Offline install
 
 `install.sh --venv-archive FILE` installs without a network: it skips apt and pip, checks

@@ -69,6 +69,37 @@ else
   apt-get install -y --no-install-recommends bluez network-manager python3 python3-venv
 fi
 
+step "Bluetooth: no GATT client"
+# BlueZ normally reads a connected phone's own GATT services. An iPhone guards some of them, so
+# BlueZ then asks it to pair, iOS shows a pairing prompt, nobody on the Pi can confirm it, and
+# the link drops after the 30 s pairing timeout. pi-configurator only serves, so the client
+# role is switched off: [GATT] Client = false in main.conf. (BlueZ's sample file lists the
+# commented #Client line under [CSIS] by mistake; bluetoothd reads it from [GATT].)
+BT_CONF="${PI_CONFIGURATOR_BT_CONF:-/etc/bluetooth/main.conf}"
+bt_changed=0
+if [[ ! -f "$BT_CONF" ]]; then
+  install -d -m 0755 "$(dirname "$BT_CONF")"
+  printf '[GATT]\nClient = false\n' >"$BT_CONF"
+  bt_changed=1
+elif grep -qE '^[[:space:]]*Client[[:space:]]*=' "$BT_CONF"; then
+  if ! grep -qE '^[[:space:]]*Client[[:space:]]*=[[:space:]]*false' "$BT_CONF"; then
+    sed -i -E 's/^[[:space:]]*Client[[:space:]]*=.*/Client = false/' "$BT_CONF"
+    bt_changed=1
+  fi
+elif grep -qE '^\[GATT\]' "$BT_CONF"; then
+  sed -i -E 's/^\[GATT\]$/[GATT]\n# pi-configurator: no GATT client role (stops pairing prompts on iPhones)\nClient = false/' "$BT_CONF"
+  bt_changed=1
+else
+  printf '\n[GATT]\n# pi-configurator: no GATT client role (stops pairing prompts on iPhones)\nClient = false\n' >>"$BT_CONF"
+  bt_changed=1
+fi
+if [[ $bt_changed == 1 ]]; then
+  echo "set Client = false in $BT_CONF"
+  systemctl restart bluetooth.service >/dev/null 2>&1 || true
+else
+  echo "already set in $BT_CONF"
+fi
+
 step "Group $GROUP"
 if ! getent group "$GROUP" >/dev/null; then
   groupadd --system "$GROUP"
