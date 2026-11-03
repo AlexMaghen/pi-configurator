@@ -1,0 +1,31 @@
+pi-fig sets up Raspberry Pi devices over Bluetooth. You don't need a Raspberry Pi to try it: the app has a built-in demo device.
+
+Turn on the demo device
+1. Open pi-fig. On the Devices screen, tap the sliders button at the top right (Preferences).
+2. Turn on "Show demo device", then go back.
+3. "BallsPi" appears in the list, marked Demo. Tap it.
+4. Enter the password 1234 and tap Unlock. The app saves the password on this phone, so next time it opens straight away.
+
+Device & Network
+5. The device page opens on "Device & Network" (the switch at the top).
+6. Tap "Wi-Fi network" to see the networks the device can see. Tap one to join it. Any password works, except on "Neighbors", which shows a wrong-password error.
+7. Change the hostname, or pick a time zone from the list (you can search it).
+8. Below the network settings are the device's details and actions: Model, Device Data, Activity, Change password, Rename device, Reboot, Forget saved password and Disconnect.
+9. Tap "Device Data". A sheet shows the device's hardware, system, network and Bluetooth details. The button at the top right copies them all.
+10. Tap "Activity" to see each step the device reported while saving.
+
+Application Settings
+11. Tap "Application Settings" at the top. These are the device's own settings.
+12. Try a number field (it opens a number pad), the "Home on start" switch, a text field, and "Log level" (a drop-down menu).
+13. After a change, Save and Discard buttons appear at the bottom. Tap Save and watch the progress as the device applies it. Or tap Discard to undo your changes.
+14. Enter a number outside the allowed range to see the error message.
+
+Leaving
+15. The circle-X at the top right of the device page goes back to the device list.
+
+Good to know
+- The demo runs entirely inside the app. There is no account, no server and no internet use.
+- The demo starts fresh each time the app is reopened. If you changed its password, a "saved password no longer works" note appears; use 1234 again.
+- Bluetooth is only used to find real Raspberry Pi devices running the pi-configurator service.
+
+Please report anything confusing, slow or broken.

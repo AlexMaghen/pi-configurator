@@ -5,6 +5,8 @@
  * The password has no complexity or length rules beyond what the protocol can carry (1 to 128
  * characters). The name is what the phone sees in its Bluetooth scan, so it must fit the
  * Bluetooth advertisement: 29 bytes.
+ *
+ * The starting point is the built-in template, or the user's own file with --config-file.
  */
 import { BluetoothName, Config } from "@pi-configurator/protocol";
 
@@ -31,4 +33,31 @@ export function personalize(templateText: string, name: string, password: string
     throw new Error(`the config isn't valid: ${issues}`);
   }
   return `${JSON.stringify(config, null, 2)}\n`;
+}
+
+/** What a config file sets for the prompts' defaults. */
+export interface ConfigSummary {
+  name: string;
+  password: string;
+  settingsCount: number;
+}
+
+/** Checks a whole config file (JSON and the Pi's rules); throws with every problem listed. */
+export function checkConfigText(text: string, source: string): ConfigSummary {
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch (err) {
+    throw new Error(`${source} isn't valid JSON: ${err instanceof Error ? err.message : String(err)}`);
+  }
+  const result = Config.safeParse(data);
+  if (!result.success) {
+    const issues = result.error.issues.map((i) => `  ${i.path.join(".") || "(top level)"}: ${i.message}`);
+    throw new Error(`${source} isn't a valid pi-configurator config:\n${issues.join("\n")}`);
+  }
+  return {
+    name: result.data.bluetooth.name,
+    password: result.data.access.password,
+    settingsCount: result.data.settings.length,
+  };
 }

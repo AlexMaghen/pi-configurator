@@ -18,6 +18,7 @@ needs only the build; the rest is for the store listing.
 | `ios/metadata/primary_category.txt`, `secondary_category.txt` | | Category |
 | `ios/metadata/copyright.txt` | | Copyright |
 | `ios/metadata/review_notes.txt` | 4,000 | App Review Information → Notes (explains the demo device) |
+| `ios/metadata/testflight_what_to_test.txt` | 4,000 | TestFlight → the build → Test Details → What to Test (walks testers through the demo device) |
 | `android/play-icon-512.png` | 512 x 512 | Play Console → Main store listing → App icon |
 | `android/feature-graphic-1024x500.png` | 1024 x 500, required | Feature graphic |
 | `android/screenshots/phone/*.png` | 1434 x 2868 (at most 2:1) | Phone screenshots |

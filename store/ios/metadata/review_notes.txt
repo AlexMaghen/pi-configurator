@@ -4,7 +4,13 @@ To try every screen:
 1. Open pi-fig. On the Devices screen, tap the sliders button at the top right (Preferences).
 2. Turn on "Show demo device" and go back.
 3. Tap "BallsPi" (marked Demo).
-4. Enter the password: 1234
-5. The device opens on "Device & Network": the Wi-Fi network row opens a list of networks, and below the network settings are the device's info and actions (Activity, Reboot, Disconnect). Switch to "Application Settings" at the top for the device's own settings. Edit any setting and tap Save.
+4. Enter the password 1234 and tap Unlock. The app remembers the password on this device.
+5. The device page opens on "Device & Network" (the switch at the top). The "Wi-Fi network" row opens the list of networks the device can see; tap one to join it. Hostname and Time zone are below it.
+6. Under the network settings are the device's details and actions: Model, Device Data (a sheet of hardware, system, network and Bluetooth details, with a copy button at the top right), Activity, Change password, Rename device, Reboot, Forget saved password and Disconnect.
+7. Tap "Application Settings" at the top for the device's own settings: number fields, a switch, text fields and a "Log level" drop-down menu.
+8. Change any setting, then tap Save at the bottom to watch the device apply it step by step, or tap Discard to undo.
+9. The circle-X at the top right of the device page returns to the device list.
 
-No account or sign-in is needed. The app has no server and makes no internet connections. Bluetooth is used only to find and talk to nearby Raspberry Pi devices.
+The demo starts fresh each time the app is reopened (password 1234).
+
+No account or sign-in is needed. The app has no server and makes no internet connections. Bluetooth is used only to find and talk to nearby Raspberry Pi devices running the pi-configurator service.

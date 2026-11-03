@@ -20,6 +20,17 @@ PC. When the Pi boots from the card for the first time, it installs pi-configura
    it: `--drive /Volumes/bootfs` (`--drive E:\` on Windows).
 4. Enter the **Device Name** (what pifig shows; at most 29 bytes, the Bluetooth limit) and the
    **pifig Access Password** (any characters, 1 to 128 of them; typed twice, not shown).
+
+   To use your own config (your device's settings list, permissions, export file) instead of
+   the built-in template, add `--config-file PATH`:
+
+   ```bash
+   ./dist/build-pifig-sd-macos-arm64 --config-file ~/robots/garage.json
+   ```
+
+   The file is checked against the same rules the Pi uses before anything on the card changes,
+   and every problem is listed. The name and password prompts then offer the file's values:
+   press Enter to keep them, or type new ones.
 5. Put the card in the Pi and switch it on. The first boot takes a few minutes.
 
 If the Pi doesn't appear in pifig, put the card back in the computer and read
@@ -45,7 +56,7 @@ On the boot drive (the Pi sees it as `/boot/firmware`):
 | File | What |
 |---|---|
 | `pi-configurator/venv.tar.gz` | pi-configurator and its Python libraries, prebuilt for 64-bit Raspberry Pi OS (Python 3.13) |
-| `pi-configurator/config.json` | The config template with the name and password you entered |
+| `pi-configurator/config.json` | The config template (or your `--config-file`) with the name and password you entered |
 | `pi-configurator/firstboot.sh`, `deploy/` | The first-boot script, the installer (`deploy/install.sh --venv-archive`) and the systemd unit |
 | `user-data` | One line added under `runcmd:` (`bash /boot/firmware/pi-configurator/firstboot.sh`); everything else, including Raspberry Pi Imager's settings, is kept |
 

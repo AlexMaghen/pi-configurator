@@ -15,7 +15,8 @@
 #                   must already be there, as they are on Raspberry Pi OS
 #
 # Safe to run again: it only creates what is missing, reinstalls the Python packages from this
-# checkout, and restarts the service when the config is valid. It never deletes anything.
+# checkout, and restarts the service when the config is valid. It never deletes anything. A new
+# config is checked first; if it has problems they're listed and nothing more is installed.
 #
 # On a first install it asks for the Bluetooth name and access password (from the terminal, so it
 # also works under `curl ... | sudo bash`); Enter keeps the values in the config as they are.
@@ -127,6 +128,16 @@ else
   "$VENV/bin/pip" install --quiet "$REPO/python/service" "$REPO/python/client"
 fi
 ln -sf "$VENV/bin/pi-configurator" /usr/local/bin/pi-configurator
+
+# A new config is checked before it's installed, so a broken one never lands in /etc (and the
+# service never starts from it). An existing config is kept as it is and checked before start.
+if [[ ! -e "$CONFIG" && -f "$config_src" ]]; then
+  step "Checking the config $config_src"
+  if ! "$VENV/bin/pi-configurator" check "$config_src"; then
+    echo "not installing this config: fix the problems listed above, then run the installer again" >&2
+    exit 2
+  fi
+fi
 
 step "Directories"
 install -d -m 0700 -o root -g root "$ETC"

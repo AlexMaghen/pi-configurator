@@ -42,6 +42,14 @@ What `install.sh` does (safe to run again; never deletes or overwrites a config)
 Updating: run the `curl ... | sudo bash` line again (or `git pull && sudo ./deploy/install.sh` in a
 checkout).
 
+## The config is checked before it's installed
+
+On a first install, `install.sh` checks the config it's about to install (the template, or the
+file given with `--config`) with `pi-configurator check`. If it has problems they're listed and
+the installer stops there: nothing is copied to `/etc/pi-configurator` and the service isn't
+started. An existing config is never replaced, and is checked before the service starts.
+build-pifig-sd checks its config the same way on the Mac or PC, before the card is touched.
+
 ## Bluetooth setting the installer changes
 
 `install.sh` sets `Client = false` under `[GATT]` in `/etc/bluetooth/main.conf` and restarts
