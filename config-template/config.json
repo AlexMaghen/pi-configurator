@@ -6,6 +6,7 @@
   "access": {
     "password": "1234"
   },
+  "deviceDescription": "Runs the StuDfs HomeKit accessories: Balls, with its door and track, and PlayStream. Wi-Fi, hostname and time zone are under Device & Network; the accessories' own settings are under Application Settings.",
   "permissions": {
     "allowReboot": true,
     "allowAccessChanges": false

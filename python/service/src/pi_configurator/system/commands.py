@@ -105,6 +105,9 @@ class Systemd:
     async def restart(self, unit: str) -> None:
         await run("systemctl", "restart", unit, timeout=self._timeout)
 
+    async def reload(self, unit: str) -> None:
+        await run("systemctl", "reload", unit, timeout=self._timeout)
+
     async def reboot(self) -> None:
         log.warning("rebooting at the phone's request")
         if os.environ.get("PI_CONFIGURATOR_NO_REBOOT"):

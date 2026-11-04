@@ -43,11 +43,16 @@ class RestartItem(RootModel[str]):
     root: Annotated[str, Field(pattern="^[A-Za-z0-9:_.@-]+\\.(service|target|socket|timer)$")]
 
 
+class ReloadItem(RootModel[str]):
+    root: Annotated[str, Field(pattern="^[A-Za-z0-9:_.@-]+\\.(service|target|socket|timer)$")]
+
+
 class OnChange(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
     restart: list[RestartItem] | None = None
+    reload: list[ReloadItem] | None = None
 
 
 class Target(BaseModel):
@@ -89,6 +94,7 @@ class OnChange1(BaseModel):
         extra="forbid",
     )
     restart: list[RestartItem] | None = None
+    reload: list[ReloadItem] | None = None
 
 
 class Target2(BaseModel):
@@ -129,6 +135,7 @@ class OnChange2(BaseModel):
         extra="forbid",
     )
     restart: list[RestartItem] | None = None
+    reload: list[ReloadItem] | None = None
 
 
 class Target4(BaseModel):
@@ -169,6 +176,7 @@ class OnChange3(BaseModel):
         extra="forbid",
     )
     restart: list[RestartItem] | None = None
+    reload: list[ReloadItem] | None = None
 
 
 class Target6(BaseModel):
@@ -205,6 +213,7 @@ class OnChange4(BaseModel):
         extra="forbid",
     )
     restart: list[RestartItem] | None = None
+    reload: list[ReloadItem] | None = None
 
 
 class Target8(BaseModel):
@@ -250,6 +259,7 @@ class OnChange5(BaseModel):
         extra="forbid",
     )
     restart: list[RestartItem] | None = None
+    reload: list[ReloadItem] | None = None
 
 
 class Target10(BaseModel):
@@ -298,6 +308,7 @@ class ConfigFile(BaseModel):
     version: Literal[1]
     bluetooth: Bluetooth
     access: Access
+    deviceDescription: Annotated[str | None, Field(max_length=1000)] = None
     permissions: Annotated[Permissions | None, Field(validate_default=True)] = {
         "allowReboot": False,
         "allowAccessChanges": False,

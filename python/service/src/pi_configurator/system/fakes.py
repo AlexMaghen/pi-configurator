@@ -89,6 +89,7 @@ class FakeTimezone:
 @dataclass
 class FakeSystemd:
     restarted: list[str] = field(default_factory=list[str])
+    reloaded: list[str] = field(default_factory=list[str])
     failing: set[str] = field(default_factory=set[str])
     reboots: int = 0
 
@@ -96,6 +97,11 @@ class FakeSystemd:
         if unit in self.failing:
             raise AdapterError(f"Job for {unit} failed")
         self.restarted.append(unit)
+
+    async def reload(self, unit: str) -> None:
+        if unit in self.failing:
+            raise AdapterError(f"Job for {unit} failed")
+        self.reloaded.append(unit)
 
     async def reboot(self) -> None:
         self.reboots += 1

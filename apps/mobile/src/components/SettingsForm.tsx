@@ -24,6 +24,7 @@ import { formatNumber } from "@/lib/format/numbers";
 import { errorMessage } from "@/lib/link/errors";
 import { useDevice, useSession, useStore } from "@/lib/session/AppProvider";
 import type { SaveOutcome } from "@/lib/session/AppStore";
+import { useFormStyles } from "@/styles/form";
 import { useLayoutStyles } from "@/styles/layout";
 
 export interface SettingsFormProps {
@@ -39,11 +40,12 @@ export function SettingsForm({ id, tab, emptyText, children }: SettingsFormProps
   const session = useSession(id);
   const device = useDevice(id);
   const l = useLayoutStyles();
+  const f = useFormStyles();
   const [outcome, setOutcome] = useState<SaveOutcome>();
   const [failure, setFailure] = useState<string>();
   const [saveStartedAt, setSaveStartedAt] = useState<number>();
 
-  const { fields, values = {}, drafts, saveErrors, busy, info } = session;
+  const { fields, values = {}, drafts, saveErrors, busy, info, description } = session;
 
   // Normally loaded by unlock; load here when arriving another way.
   useEffect(() => {
@@ -78,6 +80,7 @@ export function SettingsForm({ id, tab, emptyText, children }: SettingsFormProps
       <Stack.Screen
         options={{
           title: info?.name ?? device?.name ?? "Device",
+          headerTitleStyle: f.deviceTitle,
           // Leaving is the X on the right, back to the device list (the session stays open
           // until Disconnect or the idle timeout, as before).
           headerBackVisible: false,
@@ -110,6 +113,7 @@ export function SettingsForm({ id, tab, emptyText, children }: SettingsFormProps
           ) : undefined
         }
       >
+        {description ? <Text style={f.deviceDescription}>{description}</Text> : null}
         <DeviceTabs id={id} current={tab} />
 
         {!fields ? <ProgressNote text="Loading settings" /> : null}
@@ -122,7 +126,7 @@ export function SettingsForm({ id, tab, emptyText, children }: SettingsFormProps
             </Banner>
           ) : (
             <Banner tone="success" title="Saved">
-              {outcome.restarted.length > 0 ? `Restarted ${outcome.restarted.join(", ")}.` : "The device has the new settings."}
+              {savedSummary(outcome)}
             </Banner>
           )
         ) : null}
@@ -160,4 +164,13 @@ export function SettingsForm({ id, tab, emptyText, children }: SettingsFormProps
       </Screen>
     </>
   );
+}
+
+/** "Restarted a.service. Reloaded b.service." or, when neither, that the device has the settings. */
+function savedSummary({ restarted, reloaded }: SaveOutcome): string {
+  const parts = [
+    restarted.length > 0 ? `Restarted ${restarted.join(", ")}.` : "",
+    reloaded.length > 0 ? `Reloaded ${reloaded.join(", ")}.` : "",
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(" ") : "The device has the new settings.";
 }

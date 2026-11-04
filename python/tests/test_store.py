@@ -2,6 +2,7 @@
 
 import stat
 import threading
+import time
 from pathlib import Path
 
 import pytest
@@ -183,7 +184,7 @@ def test_client_missing_file_and_env_path(tmp_path: Path, monkeypatch: pytest.Mo
 def test_client_on_change(tmp_path: Path) -> None:
     path = tmp_path / "values.json"
     write_store(path, {"A": 1}, {"B": 2})
-    store = Store(path)
+    store = Store(path, dbus=False)
     seen: list[set[str]] = []
     got = threading.Event()
 
@@ -193,11 +194,79 @@ def test_client_on_change(tmp_path: Path) -> None:
 
     store.on_change(listener, interval_s=0.02)
     try:
-        import time
-
         time.sleep(0.05)
         write_store(path, {"A": 1, "B": 3}, {"B": 2})
         assert got.wait(2)
         assert seen[0] == {"B"}
     finally:
         store.close()
+
+
+def test_client_on_setting(tmp_path: Path) -> None:
+    path = tmp_path / "values.json"
+    write_store(path, {"A": 1}, {"B": 2})
+    store = Store(path, dbus=False)
+    seen: list[tuple[str, object, object]] = []
+    got = threading.Event()
+
+    @store.on_setting("B", interval_s=0.02)
+    def b_updated(old: object, new: object) -> None:
+        seen.append(("B", old, new))
+        got.set()
+
+    def broken(old: object, new: object) -> None:
+        raise RuntimeError("listener bug")
+
+    store.on_setting("C", broken)
+    store.on_setting("A", lambda old, new: seen.append(("A", old, new)))
+    try:
+        time.sleep(0.05)
+        write_store(path, {"A": 1, "B": 3, "C": 1}, {"B": 2})  # C's listener fails: logged only
+        assert got.wait(2)
+        assert seen == [("B", 2, 3)]
+        got.clear()
+        write_store(path, {"A": 1, "C": 1}, {})  # B gone entirely: new is None
+        assert got.wait(2)
+        assert seen == [("B", 2, 3), ("B", 3, None)]
+    finally:
+        store.close()
+
+
+def test_client_wakes_on_signal(tmp_path: Path) -> None:
+    """The D-Bus signal only sets the wake event; the store then re-reads at once."""
+    path = tmp_path / "values.json"
+    write_store(path, {"A": 1}, {})
+    store = Store(path, dbus=False)
+    got = threading.Event()
+    store.on_change(lambda keys: got.set(), interval_s=60)
+    try:
+        time.sleep(0.05)
+        write_store(path, {"A": 2}, {})
+        assert not got.wait(0.2)  # a minute to the next poll
+        store._wake.set()  # pyright: ignore[reportPrivateUsage]
+        assert got.wait(2)
+    finally:
+        store.close()
+
+
+def test_client_without_system_bus_still_polls(tmp_path: Path) -> None:
+    """With dbus on (the default) and no system bus here, changes still arrive by polling."""
+    path = tmp_path / "values.json"
+    write_store(path, {"A": 1}, {})
+    store = Store(path)
+    got = threading.Event()
+    store.on_change(lambda keys: got.set(), interval_s=0.02)
+    try:
+        time.sleep(0.05)
+        write_store(path, {"A": 2}, {})
+        assert got.wait(2)
+    finally:
+        store.close()
+
+
+def test_dbus_names_match_the_service() -> None:
+    from pi_configurator.system import settings_signal as service
+    from pi_configurator_client import dbus_signal as client
+
+    assert (client.OBJECT_PATH, client.INTERFACE) == (service.OBJECT_PATH, service.INTERFACE)
+    assert client.MEMBER in service.SettingsInterface.__dict__

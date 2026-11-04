@@ -5,16 +5,25 @@ changes.
 File shape: {"values": {KEY: saved value}, "defaults": {KEY: config default}}. A key's value is
 the saved one if there is one, else the default, else missing.
 
-Change notifications poll the file's mtime from a daemon thread (default every second). That
-works the same on Linux and macOS with no extra dependencies, which inotify wouldn't.
+Change notifications (`on_change`, `on_setting`) run on a daemon thread that re-reads the file
+and compares values. It wakes when the service's D-Bus signal says something was saved (with
+dbus-fast installed: `pip install "pi-configurator-client[dbus]"`), else polls every second. With
+the signal it still checks every 30 seconds, for changes made without one (the service applying
+new config defaults at startup, a hand-edited file). Plain polling needs no dependencies and
+works the same on Linux and macOS.
 """
 
 import json
+import logging
 import os
 import threading
 from collections.abc import Callable
 from pathlib import Path
 from typing import Final, TypeVar, cast, overload
+
+from .dbus_signal import ChangeSignal
+
+log = logging.getLogger(__name__)
 
 DEFAULT_PATH: Final = Path("/var/lib/pi-configurator/values.json")
 #: Overrides the default path (handy in tests and on a dev machine).
@@ -22,7 +31,13 @@ PATH_ENV: Final = "PI_CONFIGURATOR_STORE"
 
 type Value = bool | int | float | str | list[Value] | dict[str, Value] | None
 T = TypeVar("T")
+#: Called with the keys whose effective value changed.
 Listener = Callable[[set[str]], None]
+#: Called with a key's old and new effective value; None when it has none.
+SettingListener = Callable[[Value, Value], None]
+
+#: How often the watcher checks the file while the D-Bus signal is there to wake it.
+SIGNAL_CHECK_S: Final = 30.0
 
 
 class StoreError(Exception):
@@ -37,15 +52,19 @@ _MISSING: Final = _Missing()
 
 
 class Store:
-    def __init__(self, path: Path | str | None = None) -> None:
+    def __init__(self, path: Path | str | None = None, *, dbus: bool = True) -> None:
+        """`dbus=False` skips the D-Bus signal and always polls (tests, or no system bus)."""
         self.path = Path(path or os.environ.get(PATH_ENV) or DEFAULT_PATH)
         self._lock = threading.Lock()
         self._stamp: tuple[int, int, int] | None = None
         self._values: dict[str, Value] = {}
         self._defaults: dict[str, Value] = {}
         self._listeners: list[Listener] = []
+        self._setting_listeners: list[tuple[str, SettingListener]] = []
         self._thread: threading.Thread | None = None
         self._stop = threading.Event()
+        self._wake = threading.Event()
+        self._signal = ChangeSignal(self._wake) if dbus else None
 
     # -- reading -------------------------------------------------------------------------------
 
@@ -144,21 +163,57 @@ class Store:
     # -- change notifications ------------------------------------------------------------------
 
     def on_change(self, listener: Listener, interval_s: float = 1.0) -> None:
-        """Calls `listener(changed_keys)` from a background thread whenever an effective value
-        changes. The first listener starts the polling thread; `close()` stops it."""
+        """Calls `listener(changed_keys)` from a background thread whenever effective values
+        change. `interval_s` is how often to poll when the D-Bus signal isn't available. The
+        first listener starts the watcher; `close()` stops it."""
         self._listeners.append(listener)
-        if self._thread is None:
-            self._thread = threading.Thread(
-                target=self._poll, args=(interval_s,), name="pi-configurator-store", daemon=True
-            )
-            self._thread.start()
+        self._start_watching(interval_s)
 
-    def _poll(self, interval_s: float) -> None:
+    @overload
+    def on_setting(
+        self, key: str, listener: None = None, *, interval_s: float = 1.0
+    ) -> Callable[[SettingListener], SettingListener]: ...
+    @overload
+    def on_setting(
+        self, key: str, listener: SettingListener, *, interval_s: float = 1.0
+    ) -> SettingListener: ...
+    def on_setting(
+        self, key: str, listener: SettingListener | None = None, *, interval_s: float = 1.0
+    ) -> SettingListener | Callable[[SettingListener], SettingListener]:
+        """Calls `listener(old, new)` when one key's effective value changes. Also a decorator:
+
+        @store.on_setting("BALLS_DISPENSE_MS")
+        def setting_updated(old, new): ...
+        """
+
+        def register(fn: SettingListener) -> SettingListener:
+            self._setting_listeners.append((key, fn))
+            self._start_watching(interval_s)
+            return fn
+
+        return register if listener is None else register(listener)
+
+    def _start_watching(self, interval_s: float) -> None:
+        if self._thread is not None:
+            return
+        if self._signal is not None:
+            self._signal.start()
+        self._thread = threading.Thread(
+            target=self._watch, args=(interval_s,), name="pi-configurator-store", daemon=True
+        )
+        self._thread.start()
+
+    def _watch(self, interval_s: float) -> None:
         try:
             last = self.snapshot()
         except StoreError:
             last = {}
-        while not self._stop.wait(interval_s):
+        while not self._stop.is_set():
+            signalled = self._signal is not None and self._signal.connected
+            self._wake.wait(SIGNAL_CHECK_S if signalled else interval_s)
+            self._wake.clear()
+            if self._stop.is_set():
+                break
             try:
                 current = self.snapshot()
             except StoreError:
@@ -168,13 +223,30 @@ class Store:
                 for k in last.keys() | current.keys()
                 if last.get(k, _MISSING) != current.get(k, _MISSING)
             }
-            last = current
+            previous, last = last, current
             if changed:
-                for listener in list(self._listeners):
-                    listener(changed)
+                self._notify(changed, previous, current)
+
+    def _notify(
+        self, changed: set[str], previous: dict[str, Value], current: dict[str, Value]
+    ) -> None:
+        for listener in list(self._listeners):
+            try:
+                listener(changed)
+            except Exception:
+                log.exception("a pi-configurator change listener failed")
+        for key, setting_listener in list(self._setting_listeners):
+            if key in changed:
+                try:
+                    setting_listener(previous.get(key), current.get(key))
+                except Exception:
+                    log.exception("a pi-configurator listener for %s failed", key)
 
     def close(self) -> None:
         self._stop.set()
+        self._wake.set()
+        if self._signal is not None:
+            self._signal.close()
         if self._thread is not None:
             self._thread.join(timeout=5)
             self._thread = None

@@ -72,6 +72,8 @@ EXAMPLE_PASSWORDS: Final = frozenset({"1234", "change-me-1234"})
 _HANDLER_ORDER: Final = {"hostname": 0, "timezone": 1, "wifi": 2}
 
 NameChanged = Callable[[str], Awaitable[None]]
+#: Called with the store keys whose saved value changed, after values.json is written.
+SettingsChanged = Callable[[list[str]], Awaitable[None]]
 Sleep = Callable[[float], Awaitable[None]]
 
 
@@ -128,6 +130,7 @@ class Service:
         self.state = StateFile(paths.state)
         self.connections: set[Connection] = set()
         self.on_name_changed: NameChanged | None = None
+        self.on_settings_changed: SettingsChanged | None = None
         self.model = read_model(paths.model_file)
         self._lock = asyncio.Lock()
         self._background: set[asyncio.Task[None]] = set()
@@ -387,7 +390,10 @@ class Service:
                 except AdapterError as err:
                     log.warning("couldn't list time zones: %s", err)
             fields.append(described)
-        return {"fields": fields, "permissions": self.config.permissions.to_json()}
+        out: JsonObject = {"fields": fields, "permissions": self.config.permissions.to_json()}
+        if self.config.model.deviceDescription:
+            out["description"] = self.config.model.deviceDescription
+        return out
 
     async def _get(self, p: SettingsGetParams) -> Json:
         keys = p.keys if p.keys is not None else [f.key for f in self.config.fields]
@@ -473,8 +479,20 @@ class Service:
             if store_fields:
                 results.update(self._apply_store(conn, store_fields, p.values))
 
-            # 4. Restart each unit named by a changed field, once, after everything is written.
+            # 4. Tell programs listening for changes (the D-Bus signal) which store keys changed.
+            changed_keys = [
+                f.key for f in store_fields if results[f.key].ok and results[f.key].changed
+            ]
+            if changed_keys and self.on_settings_changed is not None:
+                try:
+                    await self.on_settings_changed(changed_keys)
+                except Exception:
+                    log.exception("announcing the changed settings failed")
+
+            # 5. Restart, then reload, each unit named by a changed field, once, after everything
+            # is written. A unit that is restarted isn't also reloaded.
             units: list[str] = []
+            reload_units: list[str] = []
             for f in self.config.fields:
                 applied = results.get(f.key)
                 if applied is None or not applied.changed or f.onChange is None:
@@ -482,7 +500,12 @@ class Service:
                 for item in f.onChange.restart or []:
                     if item.root not in units:
                         units.append(item.root)
+                for item in f.onChange.reload or []:
+                    if item.root not in reload_units:
+                        reload_units.append(item.root)
+            reload_units = [u for u in reload_units if u not in units]
             restarted: list[Json] = []
+            reloaded: list[Json] = []
             for unit in units:
                 conn.send(status_event("service.restarting", f"Restarting {unit}", unit=unit))
                 try:
@@ -495,9 +518,21 @@ class Service:
                     continue
                 restarted.append(unit)
                 conn.send(status_event("service.restarted", f"Restarted {unit}", unit=unit))
+            for unit in reload_units:
+                conn.send(status_event("service.reloading", f"Reloading {unit}", unit=unit))
+                try:
+                    await self.system.systemd.reload(unit)
+                except Exception as err:
+                    log.warning("reload %s failed: %s", unit, err)
+                    conn.send(
+                        status_event("service.failed", f"Couldn't reload {unit}: {err}", unit=unit)
+                    )
+                    continue
+                reloaded.append(unit)
+                conn.send(status_event("service.reloaded", f"Reloaded {unit}", unit=unit))
 
         out: JsonObject = {key: results[key].to_json() for key in p.values}
-        return {"results": out, "restarted": restarted}
+        return {"results": out, "restarted": restarted, "reloaded": reloaded}
 
     async def _apply_system(self, conn: Connection, f: SettingField, value: Json) -> _Applied:
         handler = handler_of(f)

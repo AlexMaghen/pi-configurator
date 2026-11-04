@@ -39,6 +39,10 @@
       ],
       "additionalProperties": false
     },
+    "deviceDescription": {
+      "type": "string",
+      "maxLength": 1000
+    },
     "permissions": {
       "default": {
         "allowReboot": false,
@@ -100,6 +104,13 @@
                 "type": "object",
                 "properties": {
                   "restart": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9:_.@-]+\\.(service|target|socket|timer)$"
+                    }
+                  },
+                  "reload": {
                     "type": "array",
                     "items": {
                       "type": "string",
@@ -213,6 +224,13 @@
                       "type": "string",
                       "pattern": "^[A-Za-z0-9:_.@-]+\\.(service|target|socket|timer)$"
                     }
+                  },
+                  "reload": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9:_.@-]+\\.(service|target|socket|timer)$"
+                    }
                   }
                 },
                 "additionalProperties": false
@@ -307,6 +325,13 @@
                 "type": "object",
                 "properties": {
                   "restart": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9:_.@-]+\\.(service|target|socket|timer)$"
+                    }
+                  },
+                  "reload": {
                     "type": "array",
                     "items": {
                       "type": "string",
@@ -409,6 +434,13 @@
                       "type": "string",
                       "pattern": "^[A-Za-z0-9:_.@-]+\\.(service|target|socket|timer)$"
                     }
+                  },
+                  "reload": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9:_.@-]+\\.(service|target|socket|timer)$"
+                    }
                   }
                 },
                 "additionalProperties": false
@@ -488,6 +520,13 @@
                 "type": "object",
                 "properties": {
                   "restart": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9:_.@-]+\\.(service|target|socket|timer)$"
+                    }
+                  },
+                  "reload": {
                     "type": "array",
                     "items": {
                       "type": "string",
@@ -593,6 +632,13 @@
                 "type": "object",
                 "properties": {
                   "restart": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9:_.@-]+\\.(service|target|socket|timer)$"
+                    }
+                  },
+                  "reload": {
                     "type": "array",
                     "items": {
                       "type": "string",

@@ -120,7 +120,9 @@ def cmd_fields(args: argparse.Namespace) -> int:
     from .pydantic_fields import fields_from_model, load_class
 
     model = load_class(args.spec)
-    entries, skipped = fields_from_model(model, group=args.group, restart=args.restart)
+    entries, skipped = fields_from_model(
+        model, group=args.group, restart=args.restart, reload=args.reload
+    )
     for name in skipped:
         print(f"skipped {name}: type not supported", file=sys.stderr)
     sys.stdout.write(dumps_pretty(entries))
@@ -153,6 +155,16 @@ async def _run(paths: Paths) -> int:
     service.warn_about_password()
     await service.startup()
 
+    from .system.settings_signal import SettingsSignal
+
+    # Not fatal: programs that poll values.json still see changes, a second or so later.
+    announcer = SettingsSignal()
+    try:
+        await announcer.start()
+        service.on_settings_changed = announcer.changed
+    except Exception as err:
+        log.warning("not announcing setting changes on D-Bus: %s", err)
+
     from .ble.bluez import BluezServer  # Linux only: imported here so everything else runs anywhere
 
     server = BluezServer(service)
@@ -169,6 +181,7 @@ async def _run(paths: Paths) -> int:
     done, _ = await asyncio.wait({bus_gone, stopped}, return_when=asyncio.FIRST_COMPLETED)
     sweeper.cancel()
     await service.shutdown()
+    announcer.close()
     if bus_gone in done:
         log.error("lost the D-Bus connection")
         return 1
@@ -225,6 +238,9 @@ def build_parser() -> argparse.ArgumentParser:
     fields.add_argument("--group", help="group to put the fields in")
     fields.add_argument(
         "--restart", action="append", help="unit to restart when one changes (repeatable)"
+    )
+    fields.add_argument(
+        "--reload", action="append", help="unit to reload when one changes (repeatable)"
     )
     fields.set_defaults(func=cmd_fields)
     return parser

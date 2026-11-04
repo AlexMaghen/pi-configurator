@@ -128,7 +128,10 @@ def field_entry(model: type[BaseModel], name: str, info: FieldInfo) -> JsonObjec
 
 
 def fields_from_model(
-    model: type[BaseModel], group: str | None = None, restart: list[str] | None = None
+    model: type[BaseModel],
+    group: str | None = None,
+    restart: list[str] | None = None,
+    reload: list[str] | None = None,
 ) -> tuple[list[Json], list[str]]:
     """Returns (entries, names of skipped fields)."""
     entries: list[Json] = []
@@ -140,8 +143,12 @@ def fields_from_model(
             continue
         if group:
             entry["group"] = group
+        on_change: dict[str, Json] = {}
         if restart:
-            units: list[Json] = [*restart]
-            entry["onChange"] = {"restart": units}
+            on_change["restart"] = [*restart]
+        if reload:
+            on_change["reload"] = [*reload]
+        if on_change:
+            entry["onChange"] = on_change
         entries.append(entry)
     return entries, skipped

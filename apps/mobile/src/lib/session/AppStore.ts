@@ -45,6 +45,8 @@ export interface DeviceSession {
   info?: DeviceInfo;
   fields?: DescribedField[];
   permissions?: Permissions;
+  /** The device's own description (config `deviceDescription`), shown under its name. */
+  description?: string;
   values?: Record<string, ValueState>;
   drafts: Drafts;
   /** Per-key errors from the last save (from the Pi). */
@@ -67,6 +69,8 @@ export interface SaveOutcome {
   saved: string[];
   failed: Record<string, string>;
   restarted: string[];
+  /** Units the Pi reloaded (onChange.reload). */
+  reloaded: string[];
 }
 
 /** Like the transport, but with the demo switch the directory has. */
@@ -291,9 +295,9 @@ export class AppStore {
 
   /** Loads the field list and all current values. */
   async load(id: string): Promise<void> {
-    const { fields, permissions } = await this.call(id, "settings.describe", {});
+    const { fields, permissions, description } = await this.call(id, "settings.describe", {});
     const { values } = await this.call(id, "settings.get", {});
-    this.patchSession(id, { fields, permissions, values });
+    this.patchSession(id, { fields, permissions, description, values });
   }
 
   async refreshValues(id: string, keys?: string[]): Promise<void> {
@@ -322,7 +326,7 @@ export class AppStore {
     const changes = pendingChanges(s.fields ?? [], s.values ?? {}, s.drafts);
     if (Object.keys(changes.errors).length > 0) {
       this.patchSession(id, { saveErrors: changes.errors });
-      return { saved: [], failed: changes.errors, restarted: [] };
+      return { saved: [], failed: changes.errors, restarted: [], reloaded: [] };
     }
     const outcome = await this.apply(id, changes.values);
     this.patchSession(id, (cur) => {
@@ -340,13 +344,13 @@ export class AppStore {
    */
   async apply(id: string, values: Record<string, SettingValue | null>): Promise<SaveOutcome> {
     const keys = Object.keys(values);
-    if (keys.length === 0) return { saved: [], failed: {}, restarted: [] };
+    if (keys.length === 0) return { saved: [], failed: {}, restarted: [], reloaded: [] };
     this.patchSession(id, { busy: "Saving", saveErrors: {} });
     try {
       let outcome: SaveOutcome;
       try {
-        const { results, restarted } = await this.call(id, "settings.set", { values });
-        outcome = { saved: [], failed: {}, restarted };
+        const { results, restarted, reloaded = [] } = await this.call(id, "settings.set", { values });
+        outcome = { saved: [], failed: {}, restarted, reloaded };
         for (const key of keys) {
           const result = results[key];
           if (!result || result.ok) outcome.saved.push(key);
@@ -354,7 +358,7 @@ export class AppStore {
         }
       } catch (err) {
         if (!isLinkError(err, "invalid_params")) throw err;
-        outcome = { saved: [], failed: perKeyDetails(err, keys), restarted: [] };
+        outcome = { saved: [], failed: perKeyDetails(err, keys), restarted: [], reloaded: [] };
       }
       this.patchSession(id, { saveErrors: outcome.failed });
       await this.refreshValues(id).catch(() => undefined);

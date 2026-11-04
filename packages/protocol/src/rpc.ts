@@ -122,7 +122,12 @@ export const Methods = {
   "settings.describe": {
     auth: true,
     params: Empty,
-    result: z.object({ fields: z.array(DescribedField), permissions: Permissions }),
+    result: z.object({
+      fields: z.array(DescribedField),
+      permissions: Permissions,
+      /** The config's `deviceDescription`, when it has one. */
+      description: z.string().optional(),
+    }),
   },
   "settings.get": {
     auth: true,
@@ -141,6 +146,8 @@ export const Methods = {
     result: z.object({
       results: z.record(z.string(), FieldResult),
       restarted: z.array(z.string()),
+      /** Units reloaded (onChange.reload). Optional: Pis before service 0.2 don't send it. */
+      reloaded: z.array(z.string()).optional(),
     }),
   },
   "wifi.scan": {
@@ -241,6 +248,8 @@ export const StatusEvent = z.object({
     "store.saved",
     "service.restarting",
     "service.restarted",
+    "service.reloading",
+    "service.reloaded",
     "service.failed",
     "system.rebooting",
     "session.ending",

@@ -113,6 +113,7 @@ export class DemoPi {
   private salt: Uint8Array;
   private verifier: bigint;
   private readonly fields: Field[];
+  private readonly description?: string;
   private readonly store = new Map<string, SettingValue>();
   private hostname: string;
   private timezone: string;
@@ -138,6 +139,7 @@ export class DemoPi {
     this.name = config.bluetooth.name;
     this.password = config.access.password;
     this.fields = config.settings;
+    this.description = config.deviceDescription;
     this.delays = { ...DEFAULT_DELAYS, ...options.delays };
     this.now = options.now ?? Date.now;
     this.salt = options.randomBytes(16);
@@ -247,6 +249,7 @@ export class DemoPi {
               : describeField(f),
           ),
           permissions,
+          ...(this.description ? { description: this.description } : {}),
         };
       case "settings.get": {
         const keys = (params.keys as string[] | undefined) ?? this.fields.map((f) => f.key);
@@ -360,6 +363,7 @@ export class DemoPi {
 
     const results: Record<string, { ok: true } | { ok: false; error: string }> = {};
     const restart = new Set<string>();
+    const reload = new Set<string>();
     let storeChanged = false;
     for (const [key, value] of Object.entries(values)) {
       const field = this.fields.find((f) => f.key === key)!;
@@ -382,6 +386,7 @@ export class DemoPi {
         if (error) continue;
       }
       for (const unit of field.onChange?.restart ?? []) restart.add(unit);
+      for (const unit of field.onChange?.reload ?? []) reload.add(unit);
     }
     if (storeChanged) await conn.notify(this.status("store.saved", "Settings saved"));
 
@@ -392,7 +397,14 @@ export class DemoPi {
       await conn.notify(this.status("service.restarted", `Restarted ${unit}`, undefined, unit));
       restarted.push(unit);
     }
-    return { results, restarted };
+    const reloaded: string[] = [];
+    for (const unit of reload) {
+      if (restart.has(unit)) continue;
+      await conn.notify(this.status("service.reloading", `Reloading ${unit}`, undefined, unit));
+      await conn.notify(this.status("service.reloaded", `Reloaded ${unit}`, undefined, unit));
+      reloaded.push(unit);
+    }
+    return { results, restarted, reloaded };
   }
 
   private async joinWifi(conn: DemoConnection, value: WifiValue, key: string): Promise<string | undefined> {

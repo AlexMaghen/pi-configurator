@@ -11,6 +11,10 @@ declare module "*.service" {
   const path: string;
   export default path;
 }
+declare module "*.conf" {
+  const path: string;
+  export default path;
+}
 declare module "*/python-version" {
   const path: string;
   export default path;

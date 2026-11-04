@@ -95,6 +95,10 @@ class TimezoneAdapter(Protocol):
 class SystemdAdapter(Protocol):
     async def restart(self, unit: str) -> None: ...
 
+    async def reload(self, unit: str) -> None:
+        """`systemctl reload`: the unit's ExecReload= (usually SIGHUP), without a restart."""
+        ...
+
     async def reboot(self) -> None: ...
 
 

@@ -54,6 +54,8 @@ StatusKind = Literal[
     "store.saved",
     "service.restarting",
     "service.restarted",
+    "service.reloading",
+    "service.reloaded",
     "service.failed",
     "system.rebooting",
     "session.ending",

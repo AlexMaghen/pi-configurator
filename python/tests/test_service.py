@@ -4,10 +4,11 @@ import asyncio
 import json
 import stat
 
+from pi_configurator import __version__
 from pi_configurator.protocol.gatt import SESSION_IDLE_TIMEOUT_S
 from pi_configurator.system.interfaces import WifiConnectResult
 
-from .conftest import PASSWORD, MakeWorld, World
+from .conftest import PASSWORD, MakeWorld, World, base_config
 
 
 async def test_full_flow(world: World) -> None:
@@ -17,7 +18,7 @@ async def test_full_flow(world: World) -> None:
         "protocol": 1,
         "name": "TestPi",
         "model": "Raspberry Pi 4 Model B Rev 1.5",
-        "serviceVersion": "0.1.0",
+        "serviceVersion": __version__,
     }
 
     phone = world.phone()
@@ -398,3 +399,73 @@ async def test_device_details(world: World) -> None:
     ]
     locked = world.phone()
     assert (await locked.error("system.details", {}))["code"] == "unauthenticated"
+
+
+async def test_changed_settings_are_announced(world: World) -> None:
+    announced: list[list[str]] = []
+
+    async def changed(keys: list[str]) -> None:
+        announced.append(keys)
+
+    world.service.on_settings_changed = changed
+    phone = await world.unlocked_phone()
+    await phone.result(
+        "settings.set", {"values": {"DISPENSE_MS": 1000, "ENABLED": True, "hostname": "x"}}
+    )
+    # ENABLED is now saved (it was the default), like a restart would count it; hostname isn't
+    # a store key. Listeners compare effective values, so ENABLED's reaches none of them.
+    assert announced == [["DISPENSE_MS", "ENABLED"]]
+    await phone.result("settings.set", {"values": {"DISPENSE_MS": 1000}})
+    assert announced == [["DISPENSE_MS", "ENABLED"]]  # nothing changed, nothing announced
+
+
+async def test_announce_failure_does_not_fail_the_save(world: World) -> None:
+    async def broken(keys: list[str]) -> None:
+        raise RuntimeError("bus gone")
+
+    world.service.on_settings_changed = broken
+    phone = await world.unlocked_phone()
+    result = await phone.result("settings.set", {"values": {"DISPENSE_MS": 1000}})
+    assert result["results"] == {"DISPENSE_MS": {"ok": True}}
+    assert result["restarted"] == ["app.service"]
+
+
+async def test_reload_units(make_world: MakeWorld) -> None:
+    config = base_config()
+    by_key = {f["key"]: f for f in config["settings"]}
+    by_key["ENABLED"]["onChange"] = {"reload": ["app.service", "viewer.service"]}
+    by_key["SERIAL"]["readOnly"] = False
+    by_key["SERIAL"]["onChange"] = {"reload": ["viewer.service", "broken.service"]}
+    world = make_world(config)
+    world.systemd.failing = {"broken.service"}
+    phone = await world.unlocked_phone()
+
+    phone.events.clear()
+    result = await phone.result("settings.set", {"values": {"ENABLED": False, "SERIAL": "X2"}})
+    assert result["restarted"] == []
+    assert result["reloaded"] == ["app.service", "viewer.service"]
+    assert world.systemd.reloaded == ["app.service", "viewer.service"]  # once each
+    assert [e["kind"] for e in phone.events][-6:] == [
+        "service.reloading",
+        "service.reloaded",
+        "service.reloading",
+        "service.reloaded",
+        "service.reloading",
+        "service.failed",
+    ]
+
+    # A unit that is restarted anyway isn't also reloaded.
+    world.systemd.reloaded.clear()
+    result = await phone.result("settings.set", {"values": {"ENABLED": True, "DISPENSE_MS": 900}})
+    assert result["restarted"] == ["app.service"]
+    assert result["reloaded"] == ["viewer.service"]
+
+
+async def test_describe_includes_device_description(make_world: MakeWorld) -> None:
+    config = base_config()
+    plain = await make_world(config).unlocked_phone()
+    assert "description" not in await plain.result("settings.describe")
+
+    config["deviceDescription"] = "Runs the ball track."
+    phone = await make_world(config).unlocked_phone()
+    assert (await phone.result("settings.describe"))["description"] == "Runs the ball track."

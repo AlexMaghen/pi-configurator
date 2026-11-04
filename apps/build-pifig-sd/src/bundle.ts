@@ -9,6 +9,7 @@ import pythonVersion from "../bundle/python-version" with { type: "file" };
 import firstboot from "../bundle/firstboot.sh" with { type: "file" };
 import install from "../bundle/deploy/install.sh" with { type: "file" };
 import unit from "../bundle/deploy/pi-configurator.service" with { type: "file" };
+import dbusPolicy from "../bundle/deploy/org.piconfigurator.conf" with { type: "file" };
 import template from "../bundle/config-template" with { type: "file" };
 import type { BundleFile } from "./install";
 
@@ -21,6 +22,7 @@ export const bundleFiles: BundleFile[] = [
   { path: "firstboot.sh", read: read(firstboot) },
   { path: "deploy/install.sh", read: read(install) },
   { path: "deploy/pi-configurator.service", read: read(unit) },
+  { path: "deploy/org.piconfigurator.conf", read: read(dbusPolicy) },
 ];
 
 export const readTemplate = (): Promise<string> => Bun.file(template).text();

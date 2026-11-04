@@ -98,6 +98,8 @@ def test_fields_from_pydantic() -> None:
     assert by_key["BALLS_API_KEY"]["secret"] is True
     assert by_key["BALLS_MODE"]["options"][1] == {"value": "manual", "label": "Manual"}
     assert "default" not in by_key["BALLS_PINCODE"]
+    reloads, _ = fields_from_model(DemoSettings, reload=["balls.service"])
+    assert cast(dict[str, Any], reloads[0])["onChange"] == {"reload": ["balls.service"]}
     # The output is a valid config, env export included.
     config: JsonObject = {
         "version": 1,

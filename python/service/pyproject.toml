@@ -1,6 +1,6 @@
 [project]
 name = "pi-configurator"
-version = "0.1.0"
+version = "0.2.0"
 description = "pi-configurator service: set up a Raspberry Pi over Bluetooth LE from a phone"
 requires-python = ">=3.12"
 dependencies = [

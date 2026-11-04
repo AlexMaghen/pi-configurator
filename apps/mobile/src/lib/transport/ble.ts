@@ -70,6 +70,14 @@ export class BleTransport implements DeviceTransport {
     const m = manager();
     if (!m) return () => undefined;
     let stopped = false;
+    let radioSub: Subscription | undefined;
+
+    const start = () =>
+      void m.startDeviceScan([GATT.service], { allowDuplicates: true }, (error, device) => {
+        if (error || !device || stopped) return;
+        onDevice(this.describe(device));
+        this.queueInfoRead(device.id, (updated) => !stopped && onDevice(updated(device)));
+      });
 
     void ensureAndroidPermissions().then((granted) => {
       if (!granted) {
@@ -78,15 +86,18 @@ export class BleTransport implements DeviceTransport {
         return;
       }
       if (stopped) return;
-      void m.startDeviceScan([GATT.service], { allowDuplicates: true }, (error, device) => {
-        if (error || !device || stopped) return;
-        onDevice(this.describe(device));
-        this.queueInfoRead(device.id, (updated) => !stopped && onDevice(updated(device)));
-      });
+      // A scan asked for before the radio is on is refused, and right after launch the state is
+      // still "Unknown". Start once it's on, and again whenever Bluetooth comes back on.
+      radioSub = m.onStateChange((state) => {
+        if (stopped) return;
+        if (state === State.PoweredOn) start();
+        else void m.stopDeviceScan();
+      }, true);
     });
 
     return () => {
       stopped = true;
+      radioSub?.remove();
       void m.stopDeviceScan();
     };
   }

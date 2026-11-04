@@ -42,6 +42,7 @@ docker run --rm --platform linux/arm64 --network none -v "$boot:/boot/firmware" 
   echo "--- installed config"; python3 -c "import json;d=json.load(open(\"/etc/pi-configurator/config.json\"));print(d[\"bluetooth\"][\"name\"], \"|\", d[\"access\"][\"password\"])"
   echo "--- pi in group"; id -nG pi
   echo "--- bluez GATT client"; awk "/^\[/{s=\$0} /^Client/{print s, \$0}" /etc/bluetooth/main.conf
+  echo "--- dbus policy"; ls /etc/dbus-1/system.d/org.piconfigurator.conf
   echo "--- systemctl"; cat /var/log/systemctl.log
   echo "--- check"; pi-configurator check
 '

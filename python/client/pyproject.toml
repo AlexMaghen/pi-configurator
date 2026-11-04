@@ -1,9 +1,13 @@
 [project]
 name = "pi-configurator-client"
-version = "0.1.0"
+version = "0.2.0"
 description = "Read settings saved by the pi-configurator service (no dependencies)"
 requires-python = ">=3.12"
 dependencies = []
+
+[project.optional-dependencies]
+# Hears the service's D-Bus signal, so change listeners run at once instead of polling.
+dbus = ["dbus-fast>=4.0"]
 
 [build-system]
 requires = ["hatchling"]

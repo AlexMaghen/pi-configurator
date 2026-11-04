@@ -58,6 +58,17 @@ some of them, so BlueZ starts a pairing that nobody on the Pi can confirm, iOS s
 prompt, and the link drops after the 30-second pairing timeout. pi-configurator only serves
 data, so the Pi doesn't need the client role.
 
+## D-Bus policy the installer adds
+
+`install.sh` puts [org.piconfigurator.conf](org.piconfigurator.conf) in `/etc/dbus-1/system.d/`
+and reloads D-Bus, so the service may own the name `org.piconfigurator`. After each save it
+emits `org.piconfigurator.Settings1.Changed(as keys)` from `/org/piconfigurator/settings`.
+Without the file the signal still goes out, just not under that name. Watch it with:
+
+```bash
+dbus-monitor --system "type='signal',interface='org.piconfigurator.Settings1'"
+```
+
 ## Offline install
 
 `install.sh --venv-archive FILE` installs without a network: it skips apt and pip, checks
@@ -72,11 +83,27 @@ from pi_configurator_client import Store  # installed in the service venv; or pi
 
 store = Store()
 ms = store.get_int("BALLS_DISPENSE_MS")
+
+store.on_change(lambda keys: print("changed:", keys))  # any change, with the changed keys
+
+@store.on_setting("BALLS_DISPENSE_MS")                # one key, with its old and new value
+def setting_updated(old, new): ...
 ```
 
+Listeners run on a background thread. In a program's own virtual environment, install
+`pi-configurator-client[dbus]` to hear the service's D-Bus signal and get changes at once;
+without the extra (or without a system bus) the client polls `values.json` every second.
+
+Programs that don't want any code for this have two config options per field:
+
+- `"onChange": {"restart": ["app.service"]}` restarts the unit after a save that changes the
+  field.
+- `"onChange": {"reload": ["app.service"]}` runs `systemctl reload`, which is the unit's
+  `ExecReload=`. Usually that is `ExecReload=/bin/kill -HUP $MAINPID`, and the program re-reads
+  its settings on SIGHUP. A unit under both is only restarted.
+
 Or set `"export": {"envFile": ".../.env.production"}` in the config: the service keeps a marked
-block of `KEY=value` lines at the end of that file (other lines are left alone) and restarts the
-units named in `onChange.restart` after a save.
+block of `KEY=value` lines at the end of that file (other lines are left alone).
 
 ## Files and environment
 

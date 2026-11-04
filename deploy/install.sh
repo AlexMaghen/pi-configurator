@@ -101,6 +101,19 @@ else
   echo "already set in $BT_CONF"
 fi
 
+step "D-Bus policy"
+# Lets the service own org.piconfigurator, the name its "settings changed" signal comes from
+# (see deploy/org.piconfigurator.conf). Without it the signal still goes out, unnamed.
+DBUS_POLICY="${PI_CONFIGURATOR_DBUS_DIR:-/etc/dbus-1/system.d}/org.piconfigurator.conf"
+install -d -m 0755 "$(dirname "$DBUS_POLICY")"
+if cmp -s "$REPO/deploy/org.piconfigurator.conf" "$DBUS_POLICY"; then
+  echo "already in $DBUS_POLICY"
+else
+  install -m 0644 "$REPO/deploy/org.piconfigurator.conf" "$DBUS_POLICY"
+  systemctl reload dbus.service >/dev/null 2>&1 || true
+  echo "installed $DBUS_POLICY"
+fi
+
 step "Group $GROUP"
 if ! getent group "$GROUP" >/dev/null; then
   groupadd --system "$GROUP"

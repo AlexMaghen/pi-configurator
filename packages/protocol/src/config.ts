@@ -17,7 +17,7 @@ const utf8Length = (s: string): number => new TextEncoder().encode(s).length;
 export const FIELD_KEY_PATTERN = "^[A-Za-z_][A-Za-z0-9_.-]{0,63}$";
 /** Keys written to an env file must also be valid shell variable names. */
 export const ENV_KEY_PATTERN = "^[A-Za-z_][A-Za-z0-9_]*$";
-/** systemd unit names that `onChange.restart` may name. */
+/** systemd unit names that `onChange.restart` and `onChange.reload` may name. */
 export const UNIT_NAME_PATTERN = "^[A-Za-z0-9:_.@-]+\\.(service|target|socket|timer)$";
 
 /** Advertised Bluetooth name, used by the config file and by `access.setName`. */
@@ -34,9 +34,15 @@ export const SystemTarget = z.object({ system: z.enum(SYSTEM_HANDLERS) }).strict
 export const Target = z.union([StoreTarget, SystemTarget]);
 export type Target = z.infer<typeof Target>;
 
+/**
+ * What the Pi does after a save changes the field. `restart` restarts each unit; `reload` runs
+ * `systemctl reload` (the unit's ExecReload=, usually a SIGHUP) for programs that re-read their
+ * settings without restarting. A unit named under both is only restarted.
+ */
 export const OnChange = z
   .object({
     restart: z.array(z.string().regex(new RegExp(UNIT_NAME_PATTERN))).optional(),
+    reload: z.array(z.string().regex(new RegExp(UNIT_NAME_PATTERN))).optional(),
   })
   .strict();
 
@@ -144,6 +150,8 @@ export const ConfigShape = z
       })
       .strict(),
     access: z.object({ password: z.string().min(1).max(128) }).strict(),
+    /** A few sentences about the device, shown under its name at the top of the device screen. */
+    deviceDescription: z.string().max(1000).optional(),
     permissions: Permissions.default({ allowReboot: false, allowAccessChanges: false }),
     export: z.object({ envFile: z.string().startsWith("/") }).strict().optional(),
     settings: z.array(Field),

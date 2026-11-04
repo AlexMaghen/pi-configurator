@@ -4,7 +4,7 @@
 #   venv.tar.gz      /opt/pi-configurator/venv with pi-configurator and its dependencies,
 #                    built for 64-bit Raspberry Pi OS Trixie (arm64, Debian's Python 3.13)
 #   python-version   the Python version the venv was built with ("3.13")
-#   deploy/          install.sh and the systemd unit
+#   deploy/          install.sh, the systemd unit and the D-Bus policy
 #   firstboot.sh     what cloud-init runs on first boot
 #   config-template  the config template (build-pifig-sd writes the name and password into a
 #                    copy, config.json; no .json here so it is embedded as a plain file)
@@ -43,7 +43,8 @@ docker run --rm --platform linux/arm64 -v "$src:/src:ro" -v "$OUT:/out" debian:t
   python3 -c "import sys; print(f\"{sys.version_info[0]}.{sys.version_info[1]}\")" > /out/python-version
 '
 
-cp "$ROOT/deploy/install.sh" "$ROOT/deploy/pi-configurator.service" "$OUT/deploy/"
+cp "$ROOT/deploy/install.sh" "$ROOT/deploy/pi-configurator.service" \
+  "$ROOT/deploy/org.piconfigurator.conf" "$OUT/deploy/"
 cp "$APP/pi/firstboot.sh" "$OUT/"
 cp "$ROOT/config-template/config.json" "$OUT/config-template"
 echo "bundle: $OUT ($(du -sh "$OUT" | cut -f1), Python $(cat "$OUT/python-version"))"

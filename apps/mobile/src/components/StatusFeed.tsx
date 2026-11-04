@@ -29,6 +29,8 @@ const OUTCOME: Record<StatusEvent["kind"], Outcome> = {
   "store.saved": "done",
   "service.restarting": "progress",
   "service.restarted": "done",
+  "service.reloading": "progress",
+  "service.reloaded": "done",
   "service.failed": "failed",
   "system.rebooting": "info",
   "session.ending": "info",

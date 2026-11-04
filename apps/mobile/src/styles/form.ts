@@ -26,6 +26,10 @@ export const useFormStyles = createStyles((t) => ({
   inputWithUnit: { flexDirection: "row", alignItems: "center", gap: t.space.sm },
   unit: { fontSize: t.fontSize.body, color: t.colors.textMuted },
   help: { fontSize: t.fontSize.small, color: t.colors.textMuted },
+  /** The device name in the device screen's header, 25% above iOS's usual title. */
+  deviceTitle: { fontSize: t.fontSize.deviceTitle, fontWeight: t.fontWeight.semibold, color: t.colors.text },
+  /** The device's description at the top of the device screen: help text, full width. */
+  deviceDescription: { fontSize: t.fontSize.small, color: t.colors.textMuted, textAlign: "left", alignSelf: "stretch" },
   error: { fontSize: t.fontSize.small, color: t.colors.danger },
   /** Small links under a field ("Reset to default"). */
   fieldActions: { flexDirection: "row", gap: t.space.lg, marginTop: t.space.xxs },

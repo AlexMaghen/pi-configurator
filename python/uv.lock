@@ -564,7 +564,7 @@ wheels = [
 
 [[package]]
 name = "pi-configurator"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "service" }
 dependencies = [
     { name = "cryptography" },
@@ -581,8 +581,17 @@ requires-dist = [
 
 [[package]]
 name = "pi-configurator-client"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "client" }
+
+[package.optional-dependencies]
+dbus = [
+    { name = "dbus-fast" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "dbus-fast", marker = "extra == 'dbus'", specifier = ">=4.0" }]
+provides-extras = ["dbus"]
 
 [[package]]
 name = "pi-configurator-workspace"

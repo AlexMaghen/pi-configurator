@@ -119,8 +119,13 @@ Edited by hand or by a device's install script, not by the phone (v1).
 | `options` | for `select` | `[{ "value": "...", "label": "..." }]`. Up to 10 options show as a drop-down menu on the field; longer lists (e.g. time zones) open a searchable page |
 | `readOnly` | no | Shown but not editable (e.g. a serial number) |
 | `onChange.restart` | no | systemd units to restart after this field changes (once per save, not per field) |
+| `onChange.reload` | no | systemd units to `systemctl reload` (ExecReload=, usually SIGHUP) after this field changes; a unit also under `restart` is only restarted |
 
 The service rejects a config file that breaks these rules at startup, with a clear log message.
+
+`deviceDescription` (optional, up to 1,000 characters) is a few sentences about the device. The
+app shows it under the device name at the top of the device screen, in the help-text style. It
+reaches the phone in the `settings.describe` result as `description`.
 
 ### 3.1a Permissions
 
@@ -171,8 +176,14 @@ Other programs on the Pi read the values the phone saved.
 
   store = Store()                          # reads values.json + defaults from config
   ms = store.get_int("BALLS_DISPENSE_MS")  # saved value, else the config default
-  store.on_change(lambda keys: reload())   # inotify-based, optional
+  store.on_change(lambda keys: reload())   # optional: changed keys
+
+  @store.on_setting("BALLS_DISPENSE_MS")   # optional: one key, old and new value
+  def setting_updated(old, new): ...
   ```
+
+  Listeners wake on the service's D-Bus signal (below) when the `dbus` extra is installed, and
+  otherwise poll the file every second.
 
   The client needs the defaults too, so the service also writes them into the store file next
   to the values (`{"values": {...}, "defaults": {...}}`). The client never opens the root-only
@@ -182,8 +193,15 @@ Other programs on the Pi read the values the phone saved.
   systemd units add `EnvironmentFile=-/var/lib/pi-configurator/ballspi.env`; real environment
   variables beat `.env.production` in pydantic-settings, so its settings classes need no code
   changes, and the committed `.env.production` in studfs-robots is never touched.
-- **Restarts:** after a save, the service restarts each unit named in `onChange.restart` of a
-  changed field, after the store file and env file are written.
+- **Change signal:** after a save that changes store values, the service emits
+  `org.piconfigurator.Settings1.Changed(as keys)` on the system D-Bus, from
+  `/org/piconfigurator/settings`, under the name `org.piconfigurator`. The signal carries key
+  names only, so it can go to everyone; values stay behind the store file's permissions. A
+  forged signal only makes a listener re-read the file.
+- **Restarts and reloads:** after a save, the service restarts each unit named in
+  `onChange.restart` of a changed field, then reloads each unit in `onChange.reload`. Both happen
+  after the store file and env file are written and the signal has gone out. The phone sees
+  `service.reloading` / `service.reloaded` status events and a `reloaded` list in the result.
 
 ## 5. Bluetooth layout
 
