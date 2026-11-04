@@ -23,7 +23,7 @@ pnpm --filter app-store-connect push
 - the newest build's What to Test;
 - price (free) and availability (every country or region), if they aren't set yet.
 
-It never submits for review, and it doesn't set the App Review contact. Running it again is safe.
+It never submits for review. Running it again is safe.
 
 Other apps: `bun src/main.ts status --bundle-id com.example.app --store-dir /path/to/store`.
 `--json` prints everything it read.
@@ -40,6 +40,10 @@ Connect API), not an Apple ID. Three environment variables, set in `~/.zshrc`:
 | `ASC_KEY_PATH` | The `AuthKey_<Key ID>.p8` file; defaults to `~/.appstoreconnect/private_keys/` |
 
 The `.p8` file is the secret: keep it out of every repository.
+
+The App Review contact is personal too, so `push` reads it from `ASC_REVIEW_CONTACT_FIRST_NAME`,
+`ASC_REVIEW_CONTACT_LAST_NAME`, `ASC_REVIEW_CONTACT_EMAIL` and `ASC_REVIEW_CONTACT_PHONE`. Without
+all four it leaves the contact as it is.
 
 ## What it can't see
 

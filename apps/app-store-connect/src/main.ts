@@ -12,7 +12,7 @@ import { resolve } from "node:path";
 import { checklist, formatReport } from "./checklist";
 import { AppStoreConnect, keyFromEnv } from "./client";
 import { readListing } from "./local";
-import { pushListing } from "./push";
+import { contactFromEnv, pushListing } from "./push";
 import { readSnapshot } from "./snapshot";
 
 const DEFAULT_BUNDLE_ID = "com.alexmaghen.pifig";
@@ -36,7 +36,12 @@ async function main(args: string[]): Promise<number> {
 
   const asc = new AppStoreConnect(keyFromEnv());
   if (command === "push") {
-    await pushListing(asc, readListing(storeDir), { bundleId, storeDir, log: (line) => console.log(`sent  ${line}`) });
+    await pushListing(asc, readListing(storeDir), {
+      bundleId,
+      storeDir,
+      contact: contactFromEnv(),
+      log: (line) => console.log(`sent  ${line}`),
+    });
     return 0;
   }
   const snapshot = await readSnapshot(asc, bundleId);

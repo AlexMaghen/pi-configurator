@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { categoryId, checklist, formatReport } from "../src/checklist";
 import { keyFromEnv, makeToken } from "../src/client";
 import { pngSize, type LocalListing } from "../src/local";
-import { ageRatingAnswers } from "../src/push";
+import { ageRatingAnswers, contactFromEnv } from "../src/push";
 import type { Snapshot } from "../src/snapshot";
 
 describe("makeToken", () => {
@@ -123,5 +123,18 @@ describe("ageRatingAnswers", () => {
     expect(
       ageRatingAnswers({ violenceRealistic: null, lootBox: null, kidsAgeBand: null, ageRatingOverride: "NONE" }),
     ).toEqual({ violenceRealistic: "NONE", lootBox: false });
+  });
+});
+
+describe("contactFromEnv", () => {
+  it("needs all four values", () => {
+    const env = {
+      ASC_REVIEW_CONTACT_FIRST_NAME: "A",
+      ASC_REVIEW_CONTACT_LAST_NAME: "B",
+      ASC_REVIEW_CONTACT_EMAIL: "a@b.c",
+      ASC_REVIEW_CONTACT_PHONE: "+1 555",
+    };
+    expect(contactFromEnv(env)).toEqual({ firstName: "A", lastName: "B", email: "a@b.c", phone: "+1 555" });
+    expect(contactFromEnv({ ...env, ASC_REVIEW_CONTACT_PHONE: "" })).toBeUndefined();
   });
 });

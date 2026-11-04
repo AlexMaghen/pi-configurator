@@ -4,6 +4,8 @@
  * build, screenshots, review notes), the newest build's What to Test, the price (free) and
  * availability (every country or region, and new ones as Apple adds them).
  *
+ * The App Review contact comes from the environment (contactFromEnv), never the repository.
+ *
  * Safe to run again: fields are overwritten with the repository's values, and screenshots are
  * only uploaded to sets that are still empty. It never submits anything for review.
  *
@@ -55,9 +57,27 @@ export function ageRatingAnswers(attributes: Record<string, unknown>): Record<st
 
 const ref = (type: string, id: string) => ({ data: { type, id } });
 
+export interface ReviewContact {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+}
+
+/**
+ * The App Review contact, from ASC_REVIEW_CONTACT_FIRST_NAME, _LAST_NAME, _EMAIL and _PHONE (kept
+ * out of the repository: it's personal). Undefined unless all four are set.
+ */
+export function contactFromEnv(env: Record<string, string | undefined> = process.env): ReviewContact | undefined {
+  const get = (name: string) => env[`ASC_REVIEW_CONTACT_${name}`]?.trim();
+  const [firstName, lastName, email, phone] = [get("FIRST_NAME"), get("LAST_NAME"), get("EMAIL"), get("PHONE")];
+  return firstName && lastName && email && phone ? { firstName, lastName, email, phone } : undefined;
+}
+
 export interface PushOptions {
   bundleId: string;
   storeDir: string;
+  contact?: ReviewContact;
   log: (line: string) => void;
 }
 
@@ -136,7 +156,12 @@ export async function pushListing(asc: AppStoreConnect, local: LocalListing, opt
   log(`Version ${versionName}: description, keywords, promotional text, support URL`);
 
   const review = await asc.one(`/v1/appStoreVersions/${version.id}/appStoreReviewDetail`).catch(() => null);
-  const reviewAttributes = { notes: m.review_notes, demoAccountRequired: false };
+  const c = opts.contact;
+  const reviewAttributes = {
+    notes: m.review_notes,
+    demoAccountRequired: false,
+    ...(c ? { contactFirstName: c.firstName, contactLastName: c.lastName, contactEmail: c.email, contactPhone: c.phone } : {}),
+  };
   if (review) {
     await asc.send("PATCH", `/v1/appStoreReviewDetails/${review.id}`, {
       data: { type: "appStoreReviewDetails", id: review.id, attributes: reviewAttributes },
@@ -150,7 +175,7 @@ export async function pushListing(asc: AppStoreConnect, local: LocalListing, opt
       },
     });
   }
-  log("App Review: notes, no sign-in required");
+  log(`App Review: notes, no sign-in required${c ? `, contact ${c.firstName} ${c.lastName}` : " (no contact: set ASC_REVIEW_CONTACT_*)"}`);
 
   await uploadScreenshots(asc, versionLoc.id, local, opts);
 
