@@ -68,12 +68,12 @@ cat /tmp/get.sh | bash; echo "exit=$?"
 echo "--- config:"; pw
 echo "--- systemctl calls:"; cat /test/systemctl.log
 
-echo "################ RUN 4: a broken --config on a first install is refused, nothing installed"
+echo "################ RUN 4: a broken --config-file-on-pi on a first install is refused, nothing installed"
 : > /test/systemctl.log
 mv /etc/pi-configurator/config.json /tmp/kept.json
 printf '{"version": 1, "bluetooth": {"name": "%s"}, "access": {"password": ""}, "settings": []}' \
   "Name-that-is-far-too-long-for-bluetooth" > /tmp/broken.json
-cat /tmp/get.sh | bash -s -- --config /tmp/broken.json; echo "exit=$?"
+cat /tmp/get.sh | bash -s -- --config-file-on-pi /tmp/broken.json; echo "exit=$?"
 echo "--- config installed: $([[ -e /etc/pi-configurator/config.json ]] && echo yes || echo no)"
 echo "--- systemctl calls:"; cat /test/systemctl.log
 mv /tmp/kept.json /etc/pi-configurator/config.json

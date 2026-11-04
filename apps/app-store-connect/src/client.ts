@@ -56,10 +56,33 @@ export interface Resource {
   attributes?: Record<string, unknown>;
 }
 
+interface ApiErrorEntry {
+  status: string;
+  code: string;
+  title: string;
+  detail?: string;
+  /** For refused submissions: per-resource reasons, e.g. a missing field. */
+  meta?: { associatedErrors?: Record<string, { code?: string; detail?: string; title?: string }[]> };
+}
+
 interface Document {
   data: Resource | Resource[] | null;
   links?: { next?: string };
-  errors?: { status: string; code: string; title: string; detail?: string }[];
+  errors?: ApiErrorEntry[];
+}
+
+/** One line per error, with any associated errors (App Review's reasons) indented under it. */
+function describeErrors(errors: ApiErrorEntry[]): string {
+  return errors
+    .map((e) => {
+      const head = `${e.title}${e.detail ? `: ${e.detail}` : ""}`;
+      const assoc = Object.values(e.meta?.associatedErrors ?? {})
+        .flat()
+        .map((a) => `\n    - ${a.detail ?? a.title ?? a.code ?? "?"}`)
+        .join("");
+      return head + assoc;
+    })
+    .join("; ");
 }
 
 export class ApiError extends Error {
@@ -109,7 +132,7 @@ export class AppStoreConnect {
     });
     const doc = (await response.json().catch(() => ({}))) as Document;
     if (!response.ok) {
-      const details = (doc.errors ?? []).map((e) => `${e.title}${e.detail ? `: ${e.detail}` : ""}`).join("; ");
+      const details = describeErrors(doc.errors ?? []);
       throw new ApiError(response.status, `${method} ${path}: ${details || response.statusText}`);
     }
     return Array.isArray(doc.data) ? (doc.data[0] ?? null) : (doc.data ?? null);

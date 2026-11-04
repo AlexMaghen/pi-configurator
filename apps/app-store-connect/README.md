@@ -25,6 +25,13 @@ pnpm --filter app-store-connect push
 
 It never submits for review. Running it again is safe.
 
+```bash
+pnpm --filter app-store-connect submit
+```
+
+`submit` sends the version being prepared to App Review ("Add for Review", then "Submit"). Run it
+only when the owner has said to submit that version.
+
 Other apps: `bun src/main.ts status --bundle-id com.example.app --store-dir /path/to/store`.
 `--json` prints everything it read.
 

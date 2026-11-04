@@ -35,7 +35,7 @@ What `install.sh` does (safe to run again; never deletes or overwrites a config)
 | apt packages | `bluez`, `network-manager`, `python3`, `python3-venv` |
 | Python venv with the service and client | `/opt/pi-configurator/venv` (uses `uv` if installed), `pi-configurator` linked into `/usr/local/bin` |
 | group `pi-configurator` | members can read the store; `--reader USER` adds one |
-| config | `/etc/pi-configurator/` (0700), `config.json` (0600, root); copied from `--config` only if missing |
+| config | `/etc/pi-configurator/` (0700), `config.json` (0600, root); copied from `--config-file-on-pi` only if missing |
 | store and state | `/var/lib/pi-configurator/` (0750 root:pi-configurator): `values.json` (0640), `state.json` (0600) |
 | unit | `/etc/systemd/system/pi-configurator.service`, enabled; started only if the config passes `check` |
 
@@ -45,7 +45,7 @@ checkout).
 ## The config is checked before it's installed
 
 On a first install, `install.sh` checks the config it's about to install (the template, or the
-file given with `--config`) with `pi-configurator check`. If it has problems they're listed and
+file given with `--config-file-on-pi`) with `pi-configurator check`. If it has problems they're listed and
 the installer stops there: nothing is copied to `/etc/pi-configurator` and the service isn't
 started. An existing config is never replaced, and is checked before the service starts.
 build-pifig-sd checks its config the same way on the Mac or PC, before the card is touched.

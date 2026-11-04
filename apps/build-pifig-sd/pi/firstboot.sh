@@ -37,7 +37,7 @@ first_user="$(getent passwd 1000 | cut -d: -f1)"
 [[ -n "$first_user" ]] && readers=(--reader "$first_user")
 
 log="$(mktemp)"
-if bash "$DIR/deploy/install.sh" --venv-archive "$DIR/venv.tar.gz" --config "$DIR/config.json" \
+if bash "$DIR/deploy/install.sh" --venv-archive "$DIR/venv.tar.gz" --config-file-on-pi "$DIR/config.json" \
   "${readers[@]}" 2>&1 | tee "$log"; then
   rm -f "$DIR/venv.tar.gz"
   finish "OK: pi-configurator is installed and running"

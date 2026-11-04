@@ -10,7 +10,7 @@
  * only uploaded to sets that are still empty. It never submits anything for review.
  *
  * Settings that are the owner's standing choices for every app: manual release, global
- * availability, free. Age rating: every content question "NONE", every yes/no question false.
+ * availability, free, no third-party content. Age rating: every content question "NONE", every yes/no question false.
  */
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
@@ -88,6 +88,12 @@ export async function pushListing(asc: AppStoreConnect, local: LocalListing, opt
   if (!app) throw new Error(`no app with bundle ID ${opts.bundleId}`);
   const locale = text(app, "primaryLocale") ?? "en-US";
   const pick = (list: Resource[]) => list.find((r) => text(r, "locale") === locale) ?? list[0];
+
+  // The owner's apps show no third-party content (App Review asks before every submission).
+  await asc.send("PATCH", `/v1/apps/${app.id}`, {
+    data: { type: "apps", id: app.id, attributes: { contentRightsDeclaration: "DOES_NOT_USE_THIRD_PARTY_CONTENT" } },
+  });
+  log("App: content rights (no third-party content)");
 
   // -- App Information -----------------------------------------------------------------------
   const infos = await asc.all(`/v1/apps/${app.id}/appInfos`);

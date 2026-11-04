@@ -48,6 +48,13 @@ export function checklist(snap: Snapshot, local: LocalListing): Item[] {
     detail: `${snap.app.name ?? "?"} (${snap.app.bundleId ?? "?"}), primary language ${snap.app.primaryLocale ?? "?"}`,
   });
 
+  items.push({
+    section: "App",
+    label: "Content rights",
+    status: snap.app.contentRights ? "ok" : "missing",
+    detail: snap.app.contentRights ? undefined : "say whether the app shows third-party content",
+  });
+
   const latest = snap.builds[0];
   if (!latest) {
     items.push({ section: "TestFlight", label: "Builds", status: "missing", detail: "no build uploaded" });
@@ -98,7 +105,7 @@ export function checklist(snap: Snapshot, local: LocalListing): Item[] {
     section: "App Information",
     label: "App Privacy",
     status: "manual",
-    detail: 'not in the API: check App Store Connect → App Privacy says "Data Not Collected" and is published',
+    detail: 'not in the API: check App Store Connect → App Privacy says "Data Not Collected" and is Published (saving alone isn\'t enough)',
   });
 
   // -- The version ---------------------------------------------------------------------------

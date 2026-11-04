@@ -40,7 +40,15 @@ export interface VersionInfo {
 }
 
 export interface Snapshot {
-  app: { id: string; name?: string; bundleId?: string; sku?: string; primaryLocale?: string };
+  app: {
+    id: string;
+    name?: string;
+    bundleId?: string;
+    sku?: string;
+    primaryLocale?: string;
+    /** USES_THIRD_PARTY_CONTENT or DOES_NOT_USE_THIRD_PARTY_CONTENT; required to submit. */
+    contentRights?: string;
+  };
   builds: BuildInfo[];
   betaGroups: { name?: string; internal: boolean }[];
   appInfo?: {
@@ -211,7 +219,14 @@ export async function readSnapshot(asc: AppStoreConnect, bundleId: string): Prom
   });
 
   return {
-    app: { id: app.id, name: text(app, "name"), bundleId: text(app, "bundleId"), sku: text(app, "sku"), primaryLocale },
+    app: {
+      id: app.id,
+      name: text(app, "name"),
+      bundleId: text(app, "bundleId"),
+      sku: text(app, "sku"),
+      primaryLocale,
+      contentRights: text(app, "contentRightsDeclaration"),
+    },
     builds,
     betaGroups,
     appInfo,

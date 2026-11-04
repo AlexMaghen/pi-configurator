@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # Installs (or updates) the pi-configurator service on a Raspberry Pi running Pi OS Trixie.
 #
-#   sudo ./deploy/install.sh [--config path/to/config.json] [--reader USER]...
+#   sudo ./deploy/install.sh [--config-file-on-pi path/to/config.json] [--reader USER]...
 #
-#   --config FILE   copy FILE to /etc/pi-configurator/config.json, ONLY if that file doesn't
-#                   exist yet (an existing config is never replaced). Defaults to the template,
+#   --config-file-on-pi FILE
+#                   copy FILE (a path on this Pi, not on the computer you SSH from) to
+#                   /etc/pi-configurator/config.json, ONLY if that file doesn't exist yet (an
+#                   existing config is never replaced). Defaults to the template,
 #                   config-template/config.json
 #   --reader USER   add USER to the pi-configurator group so its programs can read the store
 #                   (/var/lib/pi-configurator/values.json); repeatable
@@ -36,10 +38,10 @@ venv_archive=""
 readers=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --config) config_src="$2"; shift 2 ;;
+    --config-file-on-pi) config_src="$2"; shift 2 ;;
     --reader) readers+=("$2"); shift 2 ;;
     --venv-archive) venv_archive="$2"; shift 2 ;;
-    -h|--help) sed -n '2,22p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,24p' "$0"; exit 0 ;;
     *) echo "unknown option: $1" >&2; exit 64 ;;
   esac
 done
