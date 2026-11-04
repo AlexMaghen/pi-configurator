@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { categoryId, checklist, formatReport } from "../src/checklist";
 import { keyFromEnv, makeToken } from "../src/client";
 import { pngSize, type LocalListing } from "../src/local";
+import { ageRatingAnswers } from "../src/push";
 import type { Snapshot } from "../src/snapshot";
 
 describe("makeToken", () => {
@@ -114,5 +115,13 @@ describe("checklist", () => {
 
   it("turns category names into App Store Connect IDs", () => {
     expect(categoryId("Developer Tools")).toBe("DEVELOPER_TOOLS");
+  });
+});
+
+describe("ageRatingAnswers", () => {
+  it("answers NONE to level questions and false to yes/no ones, leaving the rest alone", () => {
+    expect(
+      ageRatingAnswers({ violenceRealistic: null, lootBox: null, kidsAgeBand: null, ageRatingOverride: "NONE" }),
+    ).toEqual({ violenceRealistic: "NONE", lootBox: false });
   });
 });

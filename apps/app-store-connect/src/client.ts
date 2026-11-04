@@ -100,6 +100,29 @@ export class AppStoreConnect {
     return body;
   }
 
+  /** POST, PATCH or DELETE a JSON:API body; returns the resource it answers with, if any. */
+  async send(method: "POST" | "PATCH" | "DELETE", path: string, body?: unknown): Promise<Resource | null> {
+    const response = await this.fetchImpl(new URL(path, API), {
+      method,
+      headers: { Authorization: `Bearer ${this.bearer()}`, "Content-Type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    const doc = (await response.json().catch(() => ({}))) as Document;
+    if (!response.ok) {
+      const details = (doc.errors ?? []).map((e) => `${e.title}${e.detail ? `: ${e.detail}` : ""}`).join("; ");
+      throw new ApiError(response.status, `${method} ${path}: ${details || response.statusText}`);
+    }
+    return Array.isArray(doc.data) ? (doc.data[0] ?? null) : (doc.data ?? null);
+  }
+
+  /** Sends one part of a file to the storage URL App Store Connect gave (no API token there). */
+  async upload(op: UploadOperation, bytes: Uint8Array): Promise<void> {
+    const headers = Object.fromEntries(op.requestHeaders.map((h) => [h.name, h.value]));
+    const part = bytes.subarray(op.offset, op.offset + op.length);
+    const response = await this.fetchImpl(op.url, { method: op.method, headers, body: part });
+    if (!response.ok) throw new ApiError(response.status, `upload failed: ${response.statusText}`);
+  }
+
   /** A single resource, or null when the relationship is empty. */
   async one(path: string, params?: Record<string, string>): Promise<Resource | null> {
     const { data } = await this.document(path, params);
@@ -120,6 +143,15 @@ export class AppStoreConnect {
     }
     return out;
   }
+}
+
+/** One part of a file upload, as App Store Connect hands it out (`uploadOperations`). */
+export interface UploadOperation {
+  method: string;
+  url: string;
+  length: number;
+  offset: number;
+  requestHeaders: { name: string; value: string }[];
 }
 
 export const text = (r: Resource | null | undefined, name: string): string | undefined => {

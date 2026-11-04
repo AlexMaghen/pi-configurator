@@ -3,14 +3,16 @@
  * needs, compared with the listing in the repository.
  *
  *   bun src/main.ts status [--bundle-id com.alexmaghen.pifig] [--store-dir ../../store] [--json]
+ *   bun src/main.ts push   [--bundle-id ...] [--store-dir ...]
  *
- * Read-only: it changes nothing in App Store Connect. The API key comes from ASC_KEY_ID,
+ * `status` only reads. `push` sends the listing (see push.ts) but never submits for review. The API key comes from ASC_KEY_ID,
  * ASC_ISSUER_ID and ASC_KEY_PATH (see client.ts).
  */
 import { resolve } from "node:path";
 import { checklist, formatReport } from "./checklist";
 import { AppStoreConnect, keyFromEnv } from "./client";
 import { readListing } from "./local";
+import { pushListing } from "./push";
 import { readSnapshot } from "./snapshot";
 
 const DEFAULT_BUNDLE_ID = "com.alexmaghen.pifig";
@@ -25,14 +27,18 @@ function option(args: string[], name: string): string | undefined {
 
 async function main(args: string[]): Promise<number> {
   const [command] = args;
-  if (command !== "status") {
-    console.error("usage: app-store-connect status [--bundle-id ID] [--store-dir DIR] [--json]");
+  if (command !== "status" && command !== "push") {
+    console.error("usage: app-store-connect status|push [--bundle-id ID] [--store-dir DIR] [--json]");
     return 2;
   }
   const bundleId = option(args, "--bundle-id") ?? DEFAULT_BUNDLE_ID;
   const storeDir = resolve(option(args, "--store-dir") ?? DEFAULT_STORE_DIR);
 
   const asc = new AppStoreConnect(keyFromEnv());
+  if (command === "push") {
+    await pushListing(asc, readListing(storeDir), { bundleId, storeDir, log: (line) => console.log(`sent  ${line}`) });
+    return 0;
+  }
   const snapshot = await readSnapshot(asc, bundleId);
   const items = checklist(snapshot, readListing(storeDir));
   if (args.includes("--json")) console.log(JSON.stringify({ snapshot, items }, null, 2));

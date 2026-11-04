@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "status": "bun src/main.ts status",
+    "push": "bun src/main.ts push",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run"
   },

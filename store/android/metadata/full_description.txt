@@ -7,13 +7,14 @@ WI-FI, HOSTNAME AND TIME ZONE
 See the networks the Pi can see, with signal strength and security. Join one, switch networks, or rejoin a saved network without typing its password again. Rename the Pi on your network and set its time zone.
 
 YOUR OWN SETTINGS
-Each device lists its own settings in a config file: text, numbers with ranges and steps, on/off switches, choices and secrets. pi-fig draws the form from that list, checks every value before saving, and shows which values are saved, which are defaults and which come from the device. The Pi can restart your services after a change so new values take effect straight away.
+Each device lists its own settings in a config file: text, numbers with ranges and steps, on/off switches, choices and secrets. pi-fig draws the form from that list, checks every value before saving, and shows which values are saved, which are defaults and which come from the device. A short description from the device sits at the top, so you know what you're setting up. After a change, the Pi can restart or reload your services, and programs on the Pi can be told at once which settings changed, so new values take effect straight away.
 
 PASSWORD PROTECTED
 Each device has its own access password. pi-fig proves it knows the password without ever sending it, using the SRP protocol, and encrypts everything after that. Passwords can be remembered in your device's secure storage.
 
 EVERYTHING ELSE
 - Live progress while changes are applied
+- Device Data: hardware, operating system, Wi-Fi and Bluetooth details, ready to copy
 - Reboot the Pi from your phone, if the device allows it
 - Change the device's password or Bluetooth name, if the device allows it
 - Light and dark mode

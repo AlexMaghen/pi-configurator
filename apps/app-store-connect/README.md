@@ -1,12 +1,29 @@
 # app-store-connect
 
-Shows what an app's App Store Connect record has, and what an App Review submission still
-needs, compared with the listing kept in the repository (`store/ios/metadata/*.txt` and
-`store/ios/screenshots/`). It only reads; it changes nothing in App Store Connect.
+Compares an app's App Store Connect record with the listing kept in the repository
+(`store/ios/metadata/*.txt` and `store/ios/screenshots/`), and sends that listing.
 
 ```bash
 pnpm --filter app-store-connect status
 ```
+
+`status` only reads, and lists what an App Review submission still needs.
+
+```bash
+pnpm --filter app-store-connect push
+```
+
+`push` sends the listing to the version being prepared:
+- App Information: name, subtitle, privacy URL, categories, and the age rating with "no" to
+  every question;
+- the version: description, keywords, promotional text, support URL, copyright, manual
+  release, and the newest processed build;
+- the App Review notes, with no sign-in required;
+- screenshots, but only into sets that are still empty;
+- the newest build's What to Test;
+- price (free) and availability (every country or region), if they aren't set yet.
+
+It never submits for review, and it doesn't set the App Review contact. Running it again is safe.
 
 Other apps: `bun src/main.ts status --bundle-id com.example.app --store-dir /path/to/store`.
 `--json` prints everything it read.
