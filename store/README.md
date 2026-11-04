@@ -54,9 +54,47 @@ alpha channel):
 for f in store/ios/screenshots/*/*.png; do magick "$f" -background white -alpha remove -alpha off "$f"; done
 ```
 
-The five shots, in order: a setting edited and ready to save, the save's progress, the Wi-Fi
-networks the Pi sees, the time zone list, and the device menu. They predate the Device & Network /
-Application Settings layout: retake them after it, and after the template's settings change (they show the demo device, which uses `config-template/config.json`).
+The five shots, in order (taken 2026-11-04, build 7): Application Settings with a change ready
+to save, the save's progress and Saved message, Device & Network, the Wi-Fi networks the Pi
+sees, and Device Data. They show the demo device, which uses `config-template/config.json`:
+retake them when the template's settings or the layout change.
+
+## Building and uploading to TestFlight
+
+Uploads sign in with an App Store Connect API key, not the Apple ID in Xcode. Xcode's sign-in
+expires now and then ("missing Xcode-Token"), but the key stays valid until it's revoked. The
+key is a team key for every app in the account. Its three values come from the environment
+(set in `~/.zshrc`), never from this repository:
+
+```bash
+export ASC_KEY_ID="<Key ID>"
+export ASC_ISSUER_ID="<Issuer ID>"
+export ASC_KEY_PATH="<path to AuthKey_<Key ID>.p8>"
+```
+
+Raise `buildNumber` and `versionCode` in `apps/mobile/app.config.ts`, then from `apps/mobile`:
+
+```bash
+LANG=en_US.UTF-8 CI=1 npx expo prebuild --clean --platform ios
+```
+
+```bash
+xcodebuild archive -workspace ios/pifig.xcworkspace -scheme pifig -configuration Release \
+  -destination "generic/platform=iOS" -archivePath build/pifig.xcarchive -allowProvisioningUpdates
+```
+
+```bash
+xcodebuild -exportArchive -archivePath build/pifig.xcarchive -exportOptionsPlist ExportOptions.plist \
+  -exportPath build/export -allowProvisioningUpdates -authenticationKeyPath "$ASC_KEY_PATH" \
+  -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+```
+
+The build shows up in TestFlight after Apple's processing, usually within 15 minutes. Paste
+`ios/metadata/testflight_what_to_test.txt` into the build's Test Details.
+
+To see what App Store Connect has and what a submission still needs, compared with the files
+here: `pnpm --filter app-store-connect status` (see
+[apps/app-store-connect](../apps/app-store-connect/README.md)).
 
 ## Answers App Store Connect will ask for
 

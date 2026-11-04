@@ -1,0 +1,18 @@
+{
+  "name": "app-store-connect",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Reads an app's App Store Connect record with an API key and lists what's missing before submitting it for review.",
+  "type": "module",
+  "scripts": {
+    "status": "bun src/main.ts status",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.4",
+    "bun": "^1.4.4",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  }
+}
