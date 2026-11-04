@@ -1,8 +1,8 @@
 /**
- * Fallback time zone choices for a `timezone` select field that arrives without options.
+ * Fallback time zone choices for the time zone field when it has no options.
  *
- * The Pi fills in the system's full list in `settings.describe`, so normally the field has
- * options and this isn't used. It stays as a fallback for a device that doesn't: the app offers
+ * The Pi sends the system's full list in `settings.describe` (`timezones`), so normally the field
+ * has options and this isn't used. It stays as a fallback for a device that doesn't: the app offers
  * the phone's own IANA list (Intl.supportedValuesOf, else the short list below) and also lets the
  * user type any zone name. The Pi validates the value on save.
  */

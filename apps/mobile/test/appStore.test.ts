@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { AppStore, type AppTransport, type PasswordVault } from "../src/lib/session/AppStore";
 import type { DeviceTransport } from "../src/lib/transport/types";
-import { DEMO_PASSWORD, makePi, pick, randomBytes, testConfig } from "./support";
+import { DEMO_PASSWORD, makePi, pick, restartsOf, randomBytes, testFields } from "./support";
 
 const num = pick.number();
 const next = num.default! + num.step!;
@@ -32,7 +32,7 @@ describe("AppStore", () => {
     await store.unlock("d1", DEMO_PASSWORD, { remember: true });
     expect(saved.get("d1")).toBe(DEMO_PASSWORD);
     expect(store.session("d1").phase).toBe("unlocked");
-    expect(store.session("d1").fields?.length).toBe(testConfig().settings.length);
+    expect(store.session("d1").fields?.length).toBe(testFields().length);
 
     await store.disconnect("d1");
     expect(store.session("d1").phase).toBe("closed");
@@ -53,7 +53,7 @@ describe("AppStore", () => {
     store.setDraft("d1", pick.hostname().key, { kind: "text", text: "ballspi" }); // unchanged
     const outcome = await store.save("d1");
     expect(outcome.saved).toEqual([num.key]);
-    expect(outcome.restarted).toEqual(num.onChange?.restart ?? []);
+    expect(outcome.restarted).toEqual(restartsOf(num.key));
     const s = store.session("d1");
     expect(s.values?.[num.key]).toMatchObject({ value: next, source: "saved" });
     expect(s.drafts[num.key]).toBeUndefined();

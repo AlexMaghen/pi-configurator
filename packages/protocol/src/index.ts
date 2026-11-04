@@ -1,5 +1,6 @@
 export * from "./bytes";
 export * from "./config";
+export * from "./device";
 export * from "./framing";
 export * from "./gatt";
 export * from "./rpc";

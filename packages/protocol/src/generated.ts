@@ -31,7 +31,7 @@ function configSchema() {
     title: "pi-configurator config file",
     description:
       "Shape of /etc/pi-configurator/config.json. Cross-field rules (unique keys, defaults within limits, " +
-      "handler/type pairing) are not expressible here; see packages/protocol/src/config.ts checkConfig().",
+      "reserved keys) are not expressible here; see packages/protocol/src/config.ts checkConfig().",
     ...z.toJSONSchema(ConfigShape, { io: "input", target: "draft-2020-12" }),
   };
 }

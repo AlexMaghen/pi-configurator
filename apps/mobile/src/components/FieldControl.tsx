@@ -14,7 +14,7 @@
  */
 import { MenuView } from "@expo/ui/community/menu";
 import { Pressable, Switch, Text, TextInput, View, type KeyboardTypeOptions } from "react-native";
-import type { DescribedField, ValueState } from "@pi-configurator/protocol";
+import type { FormField, ValueState } from "@pi-configurator/protocol";
 import {
   currentValue,
   initialText,
@@ -35,7 +35,7 @@ import { Badge } from "./Badge";
 import { Icon } from "./Icon";
 
 export interface FieldControlProps {
-  field: DescribedField;
+  field: FormField;
   state: ValueState | undefined;
   draft: Draft | undefined;
   /** The Pi's message from the last save, if it refused this field. */
@@ -55,7 +55,7 @@ const MENU_MAX_OPTIONS = 10;
  * decimal pad adds a decimal point); iOS has no pad with a minus sign, so a field that allows
  * negatives (no `min`, or a negative one) gets the numbers-and-punctuation keyboard instead.
  */
-function keyboardFor(field: DescribedField): KeyboardTypeOptions {
+function keyboardFor(field: FormField): KeyboardTypeOptions {
   if (field.type === "integer" || field.type === "number") {
     if (field.min === undefined || field.min < 0) return "numbers-and-punctuation";
     return field.type === "integer" ? "number-pad" : "decimal-pad";
@@ -66,7 +66,7 @@ function keyboardFor(field: DescribedField): KeyboardTypeOptions {
 }
 
 /** A field's default as display text, when the description has one. */
-function defaultText(field: DescribedField): string | undefined {
+function defaultText(field: FormField): string | undefined {
   if (!("default" in field) || field.default === undefined) return undefined;
   const d = field.default;
   if (typeof d === "number") return `${formatNumber(d)}${"unit" in field && field.unit ? ` ${field.unit}` : ""}`;
@@ -81,7 +81,7 @@ export function FieldControl({ field, state, draft, saveError, onDraft, onChoose
   const changed = isChange(field, state, draft);
   const resolved = draft && changed ? resolveDraft(field, draft) : undefined;
   const error = resolved && !resolved.ok ? resolved.error : saveError;
-  const readOnly = field.readOnly === true;
+  const readOnly = field.type !== "wifi" && field.readOnly === true;
   // Secret fields never reveal a value, only whether one is set.
   const source = isSecretField(field) && state?.secret ? (state.set ? "Set" : "Not set") : sourceLabel(state);
   const canReset = isStoreField(field) && !readOnly && state?.source === "saved";
@@ -162,7 +162,7 @@ export function FieldControl({ field, state, draft, saveError, onDraft, onChoose
         const value = draft?.kind === "value" ? draft.value : currentValue(state);
         const label = optionLabel(field, value) ?? "Choose";
         const pickerStyle = [f.picker, readOnly && f.inputDisabled, error ? f.inputError : changed ? f.inputChanged : null];
-        const options = field.options ?? [];
+        const options = field.options;
         if (options.length > 0 && options.length <= MENU_MAX_OPTIONS) {
           const saved = currentValue(state);
           const row = (

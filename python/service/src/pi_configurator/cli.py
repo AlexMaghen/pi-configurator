@@ -49,7 +49,19 @@ def cmd_check(args: argparse.Namespace) -> int:
         for issue in err.issues:
             print(f"  {issue}", file=sys.stderr)
         return EXIT_CONFIG_INVALID
-    print(f"{path}: OK ({len(config.fields)} settings, Bluetooth name {config.name!r})")
+    groups, items, device = (
+        len(config.model.appSettings or []),
+        len(config.fields),
+        len(config.system),
+    )
+
+    def count(n: int, what: str) -> str:
+        return f"{n:,} {what}{'' if n == 1 else 's'}"
+
+    print(
+        f"{path}: OK ({count(items, 'app setting')} in {count(groups, 'group')}, "
+        f"{count(device, 'device setting')}, Bluetooth name {config.name!r})"
+    )
     return 0
 
 
@@ -117,15 +129,15 @@ def cmd_set_access(args: argparse.Namespace) -> int:
 
 
 def cmd_fields(args: argparse.Namespace) -> int:
-    from .pydantic_fields import fields_from_model, load_class
+    from .pydantic_fields import group_from_model, load_class
 
     model = load_class(args.spec)
-    entries, skipped = fields_from_model(
+    group, skipped = group_from_model(
         model, group=args.group, restart=args.restart, reload=args.reload
     )
     for name in skipped:
         print(f"skipped {name}: type not supported", file=sys.stderr)
-    sys.stdout.write(dumps_pretty(entries))
+    sys.stdout.write(dumps_pretty(group))
     return 0
 
 
@@ -232,10 +244,10 @@ def build_parser() -> argparse.ArgumentParser:
     access.set_defaults(func=cmd_set_access)
 
     fields = sub.add_parser(
-        "fields-from-pydantic", help="print config field entries for a settings class"
+        "fields-from-pydantic", help="print an appSettings group for a settings class"
     )
     fields.add_argument("spec", help="module:Class, e.g. balls.settings:BallsSettings")
-    fields.add_argument("--group", help="group to put the fields in")
+    fields.add_argument("--group", help="the group's name (default: the class name)")
     fields.add_argument(
         "--restart", action="append", help="unit to restart when one changes (repeatable)"
     )

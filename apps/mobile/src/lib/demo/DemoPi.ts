@@ -5,9 +5,9 @@
  * and status events), so the app's `DeviceLink` and every screen can be exercised without a
  * Raspberry Pi or a Bluetooth radio: in the iOS Simulator, in tests, and in dev builds.
  *
- * What it fakes: a Wi-Fi radio with a few networks, the hostname and timezone handlers, a
- * key/value store with config defaults, service restarts and reboots. Permissions from the
- * config are honored. Timing is configurable so tests can run with no delays.
+ * What it fakes: a Wi-Fi radio with a few networks, the hostname and time zone, a key/value
+ * store with config defaults, service restarts and reboots. The config's `deviceSettings` are
+ * honored (settings that are off don't exist; reboot and access changes need their switch). Timing is configurable so tests can run with no delays.
  *
  * It is *not* the reference implementation; the Python service is. Where the protocol leaves a
  * choice open, this file notes the choice it made.
@@ -23,9 +23,13 @@ import {
   SRP_IDENTITY,
   GROUP_3072_SHA512,
   SrpServer,
+  appItems,
   computeVerifier,
-  describeField,
+  describeGroups,
+  deviceFields,
   fromBase64,
+  isSystemSetting,
+  itemOnChange,
   fromUtf8,
   piSession,
   splitMessage,
@@ -35,7 +39,7 @@ import {
   type Channel,
   type Config,
   type ErrorCode,
-  type Field,
+  type FormField,
   type MethodName,
   type SettingValue,
   type StatusEvent,
@@ -112,7 +116,9 @@ export class DemoPi {
   private password: string;
   private salt: Uint8Array;
   private verifier: bigint;
-  private readonly fields: Field[];
+  /** Every field: the Pi's own settings that are on, then the app items. */
+  private readonly fields: FormField[];
+  private readonly onChange = new Map<string, ReturnType<typeof itemOnChange>>();
   private readonly description?: string;
   private readonly store = new Map<string, SettingValue>();
   private hostname: string;
@@ -138,14 +144,17 @@ export class DemoPi {
     const { config } = options;
     this.name = config.bluetooth.name;
     this.password = config.access.password;
-    this.fields = config.settings;
+    this.fields = [...deviceFields(config.deviceSettings), ...appItems(config.appSettings)];
+    for (const group of config.appSettings ?? []) {
+      for (const item of group.items) this.onChange.set(item.key, itemOnChange(group, item));
+    }
     this.description = config.deviceDescription;
     this.delays = { ...DEFAULT_DELAYS, ...options.delays };
     this.now = options.now ?? Date.now;
     this.salt = options.randomBytes(16);
     this.verifier = computeVerifier(GROUP_3072_SHA512, SRP_IDENTITY, this.password, this.salt);
-    this.hostname = this.defaultOf("hostname") ?? "raspberrypi";
-    this.timezone = this.defaultOf("timezone") ?? "UTC";
+    this.hostname = this.systemDefault("hostname") ?? "raspberrypi";
+    this.timezone = this.systemDefault("timezone") ?? "UTC";
   }
 
   /** Advertised name (changes with `access.setName`). */
@@ -216,7 +225,7 @@ export class DemoPi {
   // -------------------------------------------------------------------------------------------
 
   private async dispatch(conn: DemoConnection, method: MethodName, params: Record<string, unknown>): Promise<unknown> {
-    const { permissions } = this.options.config;
+    const permissions = this.options.config.deviceSettings ?? {};
     switch (method) {
       case "auth.start": {
         this.checkRateLimit();
@@ -240,17 +249,16 @@ export class DemoPi {
           throw new RpcFailure("auth_failed", "Wrong password");
         }
       }
-      case "settings.describe":
-        // Like the Pi: a timezone field without options gets the system's list filled in.
+      case "settings.describe": {
+        // Like the Pi: the config's sections as written, plus the zone list when time zone is on.
+        const { deviceSettings = {}, appSettings } = this.options.config;
         return {
-          fields: this.fields.map((f) =>
-            f.type === "select" && !f.options && "system" in f.target && f.target.system === "timezone"
-              ? { ...describeField(f), options: timezoneChoices().map((z) => ({ value: z, label: z.replace(/_/g, " ") })) }
-              : describeField(f),
-          ),
-          permissions,
-          ...(this.description ? { description: this.description } : {}),
+          deviceSettings,
+          appSettings: describeGroups(appSettings),
+          ...(this.description ? { deviceDescription: this.description } : {}),
+          ...(this.fields.some((f) => f.key === "timezone") ? { timezones: timezoneChoices() } : {}),
         };
+      }
       case "settings.get": {
         const keys = (params.keys as string[] | undefined) ?? this.fields.map((f) => f.key);
         const values: Record<string, ValueState> = {};
@@ -350,8 +358,8 @@ export class DemoPi {
       const field = this.fields.find((f) => f.key === key);
       if (!field) problems[key] = "Unknown setting";
       else if (value === null) {
-        if (!("store" in field.target)) problems[key] = "System settings can't be reset";
-        else if (field.readOnly) problems[key] = "This setting can't be changed";
+        if (isSystemSetting(field.key)) problems[key] = "System settings can't be reset";
+        else if ("readOnly" in field && field.readOnly) problems[key] = "This setting can't be changed";
       } else {
         const problem = validateValue(field, value);
         if (problem) problems[key] = problem;
@@ -366,17 +374,16 @@ export class DemoPi {
     const reload = new Set<string>();
     let storeChanged = false;
     for (const [key, value] of Object.entries(values)) {
-      const field = this.fields.find((f) => f.key === key)!;
-      if ("store" in field.target) {
+      if (!isSystemSetting(key)) {
         if (value === null) this.store.delete(key);
         else this.store.set(key, value);
         storeChanged = true;
         results[key] = { ok: true };
-      } else if (field.target.system === "hostname") {
+      } else if (key === "hostname") {
         this.hostname = value as string;
         await conn.notify(this.status("hostname.changed", `Hostname is now ${this.hostname}`, key));
         results[key] = { ok: true };
-      } else if (field.target.system === "timezone") {
+      } else if (key === "timezone") {
         this.timezone = value as string;
         await conn.notify(this.status("timezone.changed", `Time zone is now ${this.timezone}`, key));
         results[key] = { ok: true };
@@ -385,8 +392,9 @@ export class DemoPi {
         results[key] = error ? { ok: false, error } : { ok: true };
         if (error) continue;
       }
-      for (const unit of field.onChange?.restart ?? []) restart.add(unit);
-      for (const unit of field.onChange?.reload ?? []) reload.add(unit);
+      const onChange = this.onChange.get(key);
+      for (const unit of onChange?.restart ?? []) restart.add(unit);
+      for (const unit of onChange?.reload ?? []) reload.add(unit);
     }
     if (storeChanged) await conn.notify(this.status("store.saved", "Settings saved"));
 
@@ -449,17 +457,16 @@ export class DemoPi {
     }
   }
 
-  private defaultOf(key: string): string | undefined {
-    const field = this.fields.find((f) => f.key === key);
-    return field && "default" in field && typeof field.default === "string" ? field.default : undefined;
+  /** The `deviceSettings` default for the hostname or time zone, when the config gives one. */
+  private systemDefault(name: "hostname" | "timezone"): string | undefined {
+    const setting = this.options.config.deviceSettings?.[name];
+    return typeof setting === "object" ? setting.default : undefined;
   }
 
-  private stateOf(field: Field): ValueState {
+  private stateOf(field: FormField): ValueState {
     if (field.type === "wifi") return { secret: false, value: this.wifi, source: this.wifi ? "system" : "none" };
-    if ("system" in field.target) {
-      const value = field.target.system === "hostname" ? this.hostname : this.timezone;
-      return { secret: false, value, source: "system" };
-    }
+    if (field.key === "hostname") return { secret: false, value: this.hostname, source: "system" };
+    if (field.key === "timezone") return { secret: false, value: this.timezone, source: "system" };
     const saved = this.store.get(field.key);
     const fallback = "default" in field ? (field.default as SettingValue | undefined) : undefined;
     if (field.type === "string" && field.secret) {

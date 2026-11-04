@@ -1,4 +1,4 @@
-"""Checking a value the phone wants to save, and preparing fields for the phone.
+"""Checking a value the phone wants to save, and preparing settings for the phone.
 
 Mirrors packages/protocol/src/values.ts. The app runs the TypeScript copy to show errors early;
 this one is the authority. Both are tested against test-vectors/value-cases.json (acceptance must
@@ -16,11 +16,9 @@ from .config import (
     SelectField,
     SettingField,
     StringField,
-    WifiField,
-    wifi_value_error,
 )
 from .js_regex import compile_js
-from .jsonutil import JsonObject, is_number, js_length
+from .jsonutil import Json, JsonObject, is_number, js_length
 
 # The same expressions as values.ts, written so Python's `re` means the same thing (`\Z` for
 # JavaScript's `$`, explicit A-Z instead of the `i` flag).
@@ -71,15 +69,10 @@ def validate_value(f: SettingField, value: object) -> str | None:
         return None
     if isinstance(f, BooleanField):
         return None if isinstance(value, bool) else "Must be on or off"
-    if isinstance(f, SelectField):
-        if not isinstance(value, str):
-            return "Must be one of the choices"
-        # Timezone fields without options are checked against the system's list by the service.
-        if f.options is not None and all(o.value != value for o in f.options):
-            return "Must be one of the choices"
-        return None
-    assert isinstance(f, WifiField)
-    return wifi_value_error(value)
+    assert isinstance(f, SelectField)
+    if not isinstance(value, str) or all(o.value != value for o in f.options):
+        return "Must be one of the choices"
+    return None
 
 
 def normalize_value(f: SettingField, value: object) -> object:
@@ -89,17 +82,21 @@ def normalize_value(f: SettingField, value: object) -> object:
     return value
 
 
-def describe_field(raw: JsonObject) -> JsonObject:
-    """A field as sent by settings.describe: secret defaults and Wi-Fi default passwords removed.
+def describe_groups(groups: Json) -> list[Json]:
+    """The config's raw `appSettings` as sent by settings.describe: secret defaults removed.
 
-    Works on the field's raw JSON from the config so the phone gets exactly what was written.
+    Works on the raw JSON so the phone gets exactly what was written. The input is untouched.
     """
+    out: list[Json] = []
+    for group in cast(list[JsonObject], groups or []):
+        items = [_describe_item(item) for item in cast(list[JsonObject], group["items"])]
+        out.append({**group, "items": cast(list[Json], items)})
+    return out
+
+
+def _describe_item(raw: JsonObject) -> JsonObject:
     if raw.get("type") == "string" and raw.get("secret") is True and "default" in raw:
         return {k: v for k, v in raw.items() if k != "default"}
-    default = raw.get("default")
-    if raw.get("type") == "wifi" and isinstance(default, dict) and "password" in default:
-        wifi = {k: v for k, v in default.items() if k != "password"}
-        return {**raw, "default": wifi}
     return dict(raw)
 
 

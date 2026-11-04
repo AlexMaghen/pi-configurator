@@ -3,7 +3,7 @@
  *
  * This is the single source of truth for its shape. The JSON Schema in `json-schema/` and the
  * Python models in the service are generated from it. Rules that JSON Schema can't express
- * (unique keys, defaults within limits, handler/type pairing) live in `checkConfig` below; the
+ * (unique and reserved keys, defaults within limits) live in `checkConfig` below; the
  * Python service re-implements them and both sides are tested against `test-vectors/config-cases.json`.
  */
 import { z } from "zod";
@@ -26,13 +26,15 @@ export const BluetoothName = z
   .min(1)
   .refine((s) => utf8Length(s) <= MAX_BLUETOOTH_NAME_BYTES, "Bluetooth name is longer than 29 bytes");
 
-export const SYSTEM_HANDLERS = ["wifi", "hostname", "timezone"] as const;
-export type SystemHandler = (typeof SYSTEM_HANDLERS)[number];
+/**
+ * The Pi's own settings, shown on Device & Network in this fixed order. Their keys are reserved:
+ * app settings can't use them. Labels and help are fixed (see `device.ts`).
+ */
+export const SYSTEM_SETTINGS = ["wifi", "hostname", "timezone"] as const;
+export type SystemSetting = (typeof SYSTEM_SETTINGS)[number];
 
-export const StoreTarget = z.object({ store: z.literal(true) }).strict();
-export const SystemTarget = z.object({ system: z.enum(SYSTEM_HANDLERS) }).strict();
-export const Target = z.union([StoreTarget, SystemTarget]);
-export type Target = z.infer<typeof Target>;
+/** Hostnames the Pi accepts: letters, digits and hyphens, 1 to 63, no hyphen at either end. */
+export const HOSTNAME_PATTERN = "^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?$";
 
 /**
  * What the Pi does after a save changes the field. `restart` restarts each unit; `reload` runs
@@ -62,20 +64,68 @@ export const WifiValue = z
   .strict();
 export type WifiValue = z.infer<typeof WifiValue>;
 
-/** Properties every field has. */
-const fieldBase = {
+
+// ---------------------------------------------------------------------------------------------
+// deviceSettings: which of the Pi's own settings and actions the phone offers
+// ---------------------------------------------------------------------------------------------
+
+const systemLabel = z.string().min(1).optional();
+
+/** `true` shows the Wi-Fi screen. The object form only relabels it. */
+export const WifiSetting = z.union([z.boolean(), z.object({ label: systemLabel }).strict()]);
+
+/**
+ * `true` shows the hostname. `default` is applied on the service's first start if the Pi still
+ * has a factory hostname (`raspberrypi`).
+ */
+export const HostnameSetting = z.union([
+  z.boolean(),
+  z.object({ label: systemLabel, default: z.string().regex(new RegExp(HOSTNAME_PATTERN)).optional() }).strict(),
+]);
+
+/**
+ * `true` shows the time zone, chosen from every zone the Pi knows. `default` is applied on the
+ * service's first start if the Pi is still on UTC.
+ */
+export const TimezoneSetting = z.union([
+  z.boolean(),
+  z.object({ label: systemLabel, default: z.string().min(1).optional() }).strict(),
+]);
+
+/** Everything missing is off. Device & Network is hidden when all of it is off. */
+export const DeviceSettings = z
+  .object({
+    wifi: WifiSetting.optional(),
+    hostname: HostnameSetting.optional(),
+    timezone: TimezoneSetting.optional(),
+    /** Shows a Reboot button. */
+    allowReboot: z.boolean().optional(),
+    /** Lets the phone change the access password and the Bluetooth name. */
+    allowAccessChanges: z.boolean().optional(),
+  })
+  .strict();
+export type DeviceSettings = z.infer<typeof DeviceSettings>;
+export type WifiSetting = z.infer<typeof WifiSetting>;
+export type HostnameSetting = z.infer<typeof HostnameSetting>;
+export type TimezoneSetting = z.infer<typeof TimezoneSetting>;
+
+// ---------------------------------------------------------------------------------------------
+// appSettings: groups of the device's own settings, saved for its programs to read
+// ---------------------------------------------------------------------------------------------
+
+/** Properties every setting item has. */
+const itemBase = {
   key: z.string().regex(new RegExp(FIELD_KEY_PATTERN)),
   label: z.string().min(1),
-  group: z.string().min(1).optional(),
   help: z.string().optional(),
   readOnly: z.boolean().optional(),
+  /** Replaces the group's `onChange` for this item. */
   onChange: OnChange.optional(),
-  target: Target,
 };
 
 export const StringField = z
   .object({
-    ...fieldBase,
+    ...itemBase,
     type: z.literal("string"),
     default: z.string().optional(),
     secret: z.boolean().optional(),
@@ -94,51 +144,51 @@ const numberLimits = {
 };
 
 export const IntegerField = z
-  .object({ ...fieldBase, type: z.literal("integer"), default: z.int().optional(), ...numberLimits })
+  .object({ ...itemBase, type: z.literal("integer"), default: z.int().optional(), ...numberLimits })
   .strict();
 
 export const NumberField = z
-  .object({ ...fieldBase, type: z.literal("number"), default: z.number().optional(), ...numberLimits })
+  .object({ ...itemBase, type: z.literal("number"), default: z.number().optional(), ...numberLimits })
   .strict();
 
 export const BooleanField = z
-  .object({ ...fieldBase, type: z.literal("boolean"), default: z.boolean().optional() })
+  .object({ ...itemBase, type: z.literal("boolean"), default: z.boolean().optional() })
   .strict();
 
 export const SelectOption = z.object({ value: z.string(), label: z.string().min(1) }).strict();
 
-/** `options` may be left out only for the timezone handler, which supplies the full list. */
 export const SelectField = z
   .object({
-    ...fieldBase,
+    ...itemBase,
     type: z.literal("select"),
     default: z.string().optional(),
-    options: z.array(SelectOption).min(1).optional(),
+    options: z.array(SelectOption).min(1),
   })
   .strict();
 
-export const WifiField = z
-  .object({ ...fieldBase, type: z.literal("wifi"), default: WifiValue.optional() })
-  .strict();
-
-export const Field = z.discriminatedUnion("type", [
+/** One app setting: a field in the form, and a key in the store. */
+export const SettingItem = z.discriminatedUnion("type", [
   StringField,
   IntegerField,
   NumberField,
   BooleanField,
   SelectField,
-  WifiField,
 ]);
-export type Field = z.infer<typeof Field>;
-export type FieldType = Field["type"];
+export type SettingItem = z.infer<typeof SettingItem>;
+export type ItemType = SettingItem["type"];
 
-export const Permissions = z
+/** A heading in Application Settings and the items under it, in order. */
+export const SettingGroup = z
   .object({
-    allowReboot: z.boolean().default(false),
-    allowAccessChanges: z.boolean().default(false),
+    groupName: z.string().min(1),
+    /** A line of explanation under the heading. */
+    help: z.string().optional(),
+    /** What a change to any item in the group does, unless the item has its own `onChange`. */
+    onChange: OnChange.optional(),
+    items: z.array(SettingItem).min(1),
   })
   .strict();
-export type Permissions = z.infer<typeof Permissions>;
+export type SettingGroup = z.infer<typeof SettingGroup>;
 
 export const ConfigShape = z
   .object({
@@ -152,18 +202,16 @@ export const ConfigShape = z
     access: z.object({ password: z.string().min(1).max(128) }).strict(),
     /** A few sentences about the device, shown under its name at the top of the device screen. */
     deviceDescription: z.string().max(1000).optional(),
-    permissions: Permissions.default({ allowReboot: false, allowAccessChanges: false }),
     export: z.object({ envFile: z.string().startsWith("/") }).strict().optional(),
-    settings: z.array(Field),
+    /** Device & Network. Missing means all off. */
+    deviceSettings: DeviceSettings.optional(),
+    /** Application Settings, in order. Missing or empty hides the tab. */
+    appSettings: z.array(SettingGroup).optional(),
   })
   .strict();
 
-/** Which field type each system handler needs. */
-export const HANDLER_FIELD_TYPE: Record<SystemHandler, FieldType> = {
-  wifi: "wifi",
-  hostname: "string",
-  timezone: "select",
-};
+/** The `onChange` that applies to an item: its own, else its group's. */
+export const itemOnChange = (group: SettingGroup, item: SettingItem) => item.onChange ?? group.onChange;
 
 /** A rule broken in an otherwise well-shaped config. `path` points at the offending property. */
 export interface ConfigIssue {
@@ -178,22 +226,18 @@ export interface ConfigIssue {
  */
 export type ConfigIssueCode =
   | "duplicate_key"
-  | "handler_type_mismatch"
-  | "duplicate_handler"
-  | "wifi_needs_handler"
+  | "reserved_key"
+  | "duplicate_group"
   | "min_above_max"
   | "default_out_of_range"
   | "default_not_on_step"
   | "default_pattern_mismatch"
   | "default_length"
   | "default_not_an_option"
-  | "options_required"
   | "duplicate_option"
   | "bad_pattern"
   | "env_key_invalid"
   | "length_min_above_max";
-
-const isStore = (t: Target): t is z.infer<typeof StoreTarget> => "store" in t;
 
 /** Checks the rules JSON Schema can't express. Returns no issues for a valid config. */
 export function checkConfig(config: z.infer<typeof ConfigShape>): ConfigIssue[] {
@@ -201,94 +245,86 @@ export function checkConfig(config: z.infer<typeof ConfigShape>): ConfigIssue[] 
   const add = (path: (string | number)[], code: ConfigIssueCode, message: string) =>
     issues.push({ path, code, message });
 
-  const seenKeys = new Map<string, number>();
-  const seenHandlers = new Map<SystemHandler, number>();
+  const seenKeys = new Map<string, string>();
+  const seenGroups = new Map<string, number>();
   const envKey = new RegExp(ENV_KEY_PATTERN);
+  const reserved = new Set<string>(SYSTEM_SETTINGS);
 
-  config.settings.forEach((field, i) => {
-    const at = (...rest: (string | number)[]) => ["settings", i, ...rest];
-
-    if (seenKeys.has(field.key)) {
-      add(at("key"), "duplicate_key", `Key "${field.key}" is already used by settings[${seenKeys.get(field.key)}]`);
+  (config.appSettings ?? []).forEach((group, g) => {
+    if (seenGroups.has(group.groupName)) {
+      add(["appSettings", g, "groupName"], "duplicate_group", `Group "${group.groupName}" is already used by appSettings[${seenGroups.get(group.groupName)}]`);
     } else {
-      seenKeys.set(field.key, i);
+      seenGroups.set(group.groupName, g);
     }
 
-    if (isStore(field.target)) {
-      if (field.type === "wifi") add(at("target"), "wifi_needs_handler", "Wi-Fi fields must use the wifi system handler");
-      if (config.export?.envFile && !envKey.test(field.key)) {
-        add(at("key"), "env_key_invalid", `Key "${field.key}" can't be written to an env file`);
-      }
-    } else {
-      const handler = field.target.system;
-      const needed = HANDLER_FIELD_TYPE[handler];
-      if (field.type !== needed) {
-        add(at("type"), "handler_type_mismatch", `The ${handler} handler needs a field of type "${needed}"`);
-      }
-      if (seenHandlers.has(handler)) {
-        add(at("target"), "duplicate_handler", `The ${handler} handler is already used by settings[${seenHandlers.get(handler)}]`);
+    group.items.forEach((item, i) => {
+      const at = (...rest: (string | number)[]) => ["appSettings", g, "items", i, ...rest];
+
+      if (reserved.has(item.key)) {
+        add(at("key"), "reserved_key", `Key "${item.key}" is reserved for the Pi's own ${item.key} setting`);
+      } else if (seenKeys.has(item.key)) {
+        add(at("key"), "duplicate_key", `Key "${item.key}" is already used by ${seenKeys.get(item.key)}`);
       } else {
-        seenHandlers.set(handler, i);
+        seenKeys.set(item.key, `appSettings[${g}].items[${i}]`);
       }
-    }
+      if (config.export?.envFile && !envKey.test(item.key)) {
+        add(at("key"), "env_key_invalid", `Key "${item.key}" can't be written to an env file`);
+      }
 
-    switch (field.type) {
-      case "integer":
-      case "number": {
-        const { min, max, step } = field;
-        if (min !== undefined && max !== undefined && min > max) add(at("min"), "min_above_max", "min is above max");
-        const d = field.default;
-        if (d !== undefined) {
-          if ((min !== undefined && d < min) || (max !== undefined && d > max)) {
-            add(at("default"), "default_out_of_range", "default is outside min/max");
+      switch (item.type) {
+        case "integer":
+        case "number": {
+          const { min, max, step } = item;
+          if (min !== undefined && max !== undefined && min > max) add(at("min"), "min_above_max", "min is above max");
+          const d = item.default;
+          if (d !== undefined) {
+            if ((min !== undefined && d < min) || (max !== undefined && d > max)) {
+              add(at("default"), "default_out_of_range", "default is outside min/max");
+            }
+            if (step !== undefined) {
+              const steps = (d - (min ?? 0)) / step;
+              if (Math.abs(steps - Math.round(steps)) > 1e-9) add(at("default"), "default_not_on_step", "default is not on a step");
+            }
           }
-          if (step !== undefined) {
-            const steps = (d - (min ?? 0)) / step;
-            if (Math.abs(steps - Math.round(steps)) > 1e-9) add(at("default"), "default_not_on_step", "default is not on a step");
-          }
+          break;
         }
-        break;
+        case "string": {
+          let pattern: RegExp | undefined;
+          if (item.pattern !== undefined) {
+            try {
+              pattern = new RegExp(item.pattern);
+            } catch {
+              add(at("pattern"), "bad_pattern", "pattern is not a valid regular expression");
+            }
+          }
+          const { minLength, maxLength } = item;
+          if (minLength !== undefined && maxLength !== undefined && minLength > maxLength) {
+            add(at("minLength"), "length_min_above_max", "minLength is above maxLength");
+          }
+          const d = item.default;
+          if (d !== undefined) {
+            if (pattern && !pattern.test(d)) add(at("default"), "default_pattern_mismatch", "default doesn't match pattern");
+            if ((minLength !== undefined && d.length < minLength) || (maxLength !== undefined && d.length > maxLength)) {
+              add(at("default"), "default_length", "default is outside minLength/maxLength");
+            }
+          }
+          break;
+        }
+        case "select": {
+          const values = new Set<string>();
+          item.options.forEach((o, j) => {
+            if (values.has(o.value)) add(at("options", j, "value"), "duplicate_option", `Option "${o.value}" is listed twice`);
+            values.add(o.value);
+          });
+          if (item.default !== undefined && !values.has(item.default)) {
+            add(at("default"), "default_not_an_option", "default is not one of the options");
+          }
+          break;
+        }
+        default:
+          break;
       }
-      case "string": {
-        let pattern: RegExp | undefined;
-        if (field.pattern !== undefined) {
-          try {
-            pattern = new RegExp(field.pattern);
-          } catch {
-            add(at("pattern"), "bad_pattern", "pattern is not a valid regular expression");
-          }
-        }
-        const { minLength, maxLength } = field;
-        if (minLength !== undefined && maxLength !== undefined && minLength > maxLength) {
-          add(at("minLength"), "length_min_above_max", "minLength is above maxLength");
-        }
-        const d = field.default;
-        if (d !== undefined) {
-          if (pattern && !pattern.test(d)) add(at("default"), "default_pattern_mismatch", "default doesn't match pattern");
-          if ((minLength !== undefined && d.length < minLength) || (maxLength !== undefined && d.length > maxLength)) {
-            add(at("default"), "default_length", "default is outside minLength/maxLength");
-          }
-        }
-        break;
-      }
-      case "select": {
-        const handler = isStore(field.target) ? undefined : field.target.system;
-        if (!field.options && handler !== "timezone") {
-          add(at("options"), "options_required", "select fields need options (only timezone may leave them out)");
-        }
-        const values = new Set<string>();
-        field.options?.forEach((o, j) => {
-          if (values.has(o.value)) add(at("options", j, "value"), "duplicate_option", `Option "${o.value}" is listed twice`);
-          values.add(o.value);
-        });
-        if (field.default !== undefined && field.options && !values.has(field.default)) {
-          add(at("default"), "default_not_an_option", "default is not one of the options");
-        }
-        break;
-      }
-      default:
-        break;
-    }
+    });
   });
 
   return issues;

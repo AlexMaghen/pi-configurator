@@ -6,7 +6,7 @@
 import { describe, expect, it } from "vitest";
 import { AUTH_BACKOFF, validateValue, type StatusEvent } from "@pi-configurator/protocol";
 import { LinkError } from "../src/lib/link/errors";
-import { DEMO_PASSWORD, SECRET_FIELD, makePi, openLink, pick, testConfig, unlockedLink } from "./support";
+import { DEMO_PASSWORD, SECRET_FIELD, makePi, openLink, pick, restartsOf, testConfig, unlockedLink } from "./support";
 
 const num = pick.number();
 const url = pick.url();
@@ -74,8 +74,8 @@ describe("framing", () => {
   it("works at the smallest MTU (20-byte frames)", async () => {
     const { link } = await unlockedLink({ mtu: 23 });
     expect(link.frameSize).toBe(20);
-    const { fields } = await link.call("settings.describe", {});
-    expect(fields.map((f) => f.key)).toEqual(testConfig().settings.map((f) => f.key));
+    const { appSettings } = await link.call("settings.describe", {});
+    expect(appSettings.map((g) => g.groupName)).toEqual(testConfig().appSettings!.map((g) => g.groupName));
     const set = await link.call("settings.set", { values: { [url.key]: "https://example.com/stream" } });
     expect(set.results[url.key]).toEqual({ ok: true });
   });
@@ -88,15 +88,26 @@ describe("framing", () => {
 });
 
 describe("settings", () => {
-  it("describes fields without secret defaults, fills timezone options, plus permissions", async () => {
+  it("describes both sections as in the config, without secret defaults, plus time zones", async () => {
     const { link } = await unlockedLink({ permissions: { allowAccessChanges: false } });
-    const { fields, permissions } = await link.call("settings.describe", {});
-    expect(permissions).toEqual({ allowReboot: true, allowAccessChanges: false });
-    const secret = fields.find((f) => f.key === SECRET_FIELD.key);
+    const { deviceSettings, appSettings, timezones } = await link.call("settings.describe", {});
+    expect(deviceSettings).toEqual(testConfig({ allowAccessChanges: false }).deviceSettings);
+    expect(deviceSettings.allowReboot).toBe(true);
+    const items = appSettings.flatMap((g) => g.items);
+    const secret = items.find((f) => f.key === SECRET_FIELD.key);
     expect(secret && "default" in secret).toBe(false);
-    expect(fields.map((f) => f.group)).toEqual(testConfig().settings.map((f) => f.group));
-    const tz = fields.find((f) => f.key === pick.timezone().key);
-    expect(tz?.type === "select" && tz.options?.some((o) => o.value === "Europe/Paris")).toBe(true);
+    expect(appSettings.map((g) => g.groupName)).toEqual(testConfig().appSettings!.map((g) => g.groupName));
+    expect(timezones).toContain("Europe/Paris");
+  });
+
+  it("leaves out the Pi's own settings that the config turns off", async () => {
+    const { link } = await unlockedLink({ permissions: { hostname: false, timezone: false } });
+    const { timezones } = await link.call("settings.describe", {});
+    expect(timezones).toBeUndefined();
+    const { values } = await link.call("settings.get", {});
+    expect(values.hostname).toBeUndefined();
+    const err = await expectLinkError(link.call("settings.set", { values: { hostname: "x" } }), "invalid_params");
+    expect(err.details).toEqual({ hostname: "Unknown setting" });
   });
 
   it("gets values with their source", async () => {
@@ -120,7 +131,7 @@ describe("settings", () => {
       values: { [num.key]: nextNumber, [SECRET_FIELD.key]: "abc123", [pick.hostname().key]: "balls-2" },
     });
     expect(set.results).toEqual({ [num.key]: { ok: true }, [SECRET_FIELD.key]: { ok: true }, [pick.hostname().key]: { ok: true } });
-    const units = [...new Set([...(num.onChange?.restart ?? []), ...(SECRET_FIELD.onChange?.restart ?? [])])];
+    const units = [...new Set([...restartsOf(num.key), ...restartsOf(SECRET_FIELD.key)])];
     expect(set.restarted.sort()).toEqual(units.sort());
     expect(events.map((e) => e.kind)).toEqual([
       "hostname.changed",

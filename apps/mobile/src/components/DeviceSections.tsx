@@ -1,8 +1,8 @@
 /**
- * The device part of Device & Network, under the network settings: what the device reported
- * about itself, and the actions its permissions allow. Reboot needs `permissions.allowReboot`;
- * Change password and Rename need `permissions.allowAccessChanges`. Hidden controls are refused
- * by the Pi anyway.
+ * The device part of the device page, under the settings (on Device & Network, or on Application
+ * Settings when the config hides Device & Network): what the device reported about itself, and
+ * the actions its config allows. Reboot needs `deviceSettings.allowReboot`; Change password and
+ * Rename need `deviceSettings.allowAccessChanges`. Hidden controls are refused by the Pi anyway.
  */
 import { useEffect, useState } from "react";
 import { Alert } from "react-native";
@@ -28,7 +28,7 @@ export function DeviceSections({ id }: { id: string }) {
     void store.hasSavedPassword(id).then(setHasSaved);
   }, [id, store]);
 
-  const { info, permissions } = session;
+  const { info, deviceSettings: permissions } = session;
   const name = info?.name ?? device?.name ?? "Device";
   const go = (
     pathname: "/device/[id]/details" | "/device/[id]/activity" | "/device/[id]/password" | "/device/[id]/rename",

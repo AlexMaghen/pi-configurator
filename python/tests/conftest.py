@@ -29,31 +29,37 @@ def base_config(env_file: Path | None = None, **permissions: bool) -> dict[str, 
         "version": 1,
         "bluetooth": {"name": "TestPi"},
         "access": {"password": PASSWORD},
-        "permissions": {"allowReboot": False, "allowAccessChanges": False, **permissions},
-        "settings": [
-            {"key": "wifi", "label": "Wi-Fi", "type": "wifi", "target": {"system": "wifi"},
-             "default": {"ssid": "Home", "password": "home-password"}},
-            {"key": "hostname", "label": "Hostname", "type": "string", "default": "testpi",
-             "pattern": "^[a-z0-9-]{1,63}$", "target": {"system": "hostname"}},
-            {"key": "tz", "label": "Time zone", "type": "select", "default": "America/Los_Angeles",
-             "target": {"system": "timezone"}},
-            {"key": "DISPENSE_MS", "label": "Dispense", "type": "integer", "min": 100, "max": 5000,
-             "step": 50, "default": 800, "target": {"store": True},
-             "onChange": {"restart": ["app.service"]}},
-            {"key": "STREAM_URL", "label": "Stream", "type": "string", "format": "url",
-             "default": "", "target": {"store": True},
-             "onChange": {"restart": ["app.service", "other.service"]}},
-            {"key": "API_KEY", "label": "API key", "type": "string", "secret": True,
-             "target": {"store": True}, "onChange": {"restart": ["app.service"]}},
-            {"key": "ENABLED", "label": "Enabled", "type": "boolean", "default": True,
-             "target": {"store": True}},
-            {"key": "SERIAL", "label": "Serial", "type": "string", "readOnly": True,
-             "default": "X1", "target": {"store": True}},
+        "deviceSettings": {
+            "wifi": True,
+            "hostname": {"default": "testpi"},
+            "timezone": {"label": "Zone", "default": "America/Los_Angeles"},
+            "allowReboot": False,
+            "allowAccessChanges": False,
+            **permissions,
+        },
+        "appSettings": [
+            {"groupName": "App", "onChange": {"restart": ["app.service"]}, "items": [
+                {"key": "DISPENSE_MS", "label": "Dispense", "type": "integer", "min": 100,
+                 "max": 5000, "step": 50, "default": 800},
+                {"key": "STREAM_URL", "label": "Stream", "type": "string", "format": "url",
+                 "default": "", "onChange": {"restart": ["app.service", "other.service"]}},
+                {"key": "API_KEY", "label": "API key", "type": "string", "secret": True},
+            ]},
+            {"groupName": "Other", "items": [
+                {"key": "ENABLED", "label": "Enabled", "type": "boolean", "default": True},
+                {"key": "SERIAL", "label": "Serial", "type": "string", "readOnly": True,
+                 "default": "X1"},
+            ]},
         ],
     }  # fmt: skip
     if env_file is not None:
         config["export"] = {"envFile": str(env_file)}
     return config
+
+
+def items_by_key(config: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """The config's app setting items by key, for tests that change one."""
+    return {i["key"]: i for g in config["appSettings"] for i in g["items"]}
 
 
 class Clock:

@@ -24,19 +24,47 @@ class Access(BaseModel):
     password: Annotated[str, Field(max_length=128, min_length=1)]
 
 
-class Permissions(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    allowReboot: bool | None = False
-    allowAccessChanges: bool | None = False
-
-
 class Export(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
     envFile: Annotated[str, Field(pattern="^\\/.*")]
+
+
+class Wifi(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    label: Annotated[str | None, Field(min_length=1)] = None
+
+
+class Hostname(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    label: Annotated[str | None, Field(min_length=1)] = None
+    default: Annotated[
+        str | None, Field(pattern="^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?$")
+    ] = None
+
+
+class Timezone(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    label: Annotated[str | None, Field(min_length=1)] = None
+    default: Annotated[str | None, Field(min_length=1)] = None
+
+
+class DeviceSettings(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    wifi: bool | Wifi | None = None
+    hostname: bool | Hostname | None = None
+    timezone: bool | Timezone | None = None
+    allowReboot: bool | None = None
+    allowAccessChanges: bool | None = None
 
 
 class RestartItem(RootModel[str]):
@@ -55,40 +83,6 @@ class OnChange(BaseModel):
     reload: list[ReloadItem] | None = None
 
 
-class Target(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    store: Literal[True]
-
-
-class Target1(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    system: Literal["wifi", "hostname", "timezone"]
-
-
-class Settings(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    key: Annotated[str, Field(pattern="^[A-Za-z_][A-Za-z0-9_.-]{0,63}$")]
-    label: Annotated[str, Field(min_length=1)]
-    group: Annotated[str | None, Field(min_length=1)] = None
-    help: str | None = None
-    readOnly: bool | None = None
-    onChange: OnChange | None = None
-    target: Target | Target1
-    type: Literal["string"]
-    default: str | None = None
-    secret: bool | None = None
-    pattern: str | None = None
-    format: Literal["url", "email", "multiline"] | None = None
-    minLength: Annotated[int | None, Field(ge=0, le=9007199254740991)] = None
-    maxLength: Annotated[int | None, Field(gt=0, le=9007199254740991)] = None
-
-
 class OnChange1(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -97,37 +91,22 @@ class OnChange1(BaseModel):
     reload: list[ReloadItem] | None = None
 
 
-class Target2(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    store: Literal[True]
-
-
-class Target3(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    system: Literal["wifi", "hostname", "timezone"]
-
-
-class Settings1(BaseModel):
+class Items(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
     key: Annotated[str, Field(pattern="^[A-Za-z_][A-Za-z0-9_.-]{0,63}$")]
     label: Annotated[str, Field(min_length=1)]
-    group: Annotated[str | None, Field(min_length=1)] = None
     help: str | None = None
     readOnly: bool | None = None
     onChange: OnChange1 | None = None
-    target: Target2 | Target3
-    type: Literal["integer"]
-    default: Annotated[int | None, Field(ge=-9007199254740991, le=9007199254740991)] = None
-    min: float | None = None
-    max: float | None = None
-    step: Annotated[float | None, Field(gt=0.0)] = None
-    unit: str | None = None
+    type: Literal["string"]
+    default: str | None = None
+    secret: bool | None = None
+    pattern: str | None = None
+    format: Literal["url", "email", "multiline"] | None = None
+    minLength: Annotated[int | None, Field(ge=0, le=9007199254740991)] = None
+    maxLength: Annotated[int | None, Field(gt=0, le=9007199254740991)] = None
 
 
 class OnChange2(BaseModel):
@@ -138,33 +117,17 @@ class OnChange2(BaseModel):
     reload: list[ReloadItem] | None = None
 
 
-class Target4(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    store: Literal[True]
-
-
-class Target5(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    system: Literal["wifi", "hostname", "timezone"]
-
-
-class Settings2(BaseModel):
+class Items1(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
     key: Annotated[str, Field(pattern="^[A-Za-z_][A-Za-z0-9_.-]{0,63}$")]
     label: Annotated[str, Field(min_length=1)]
-    group: Annotated[str | None, Field(min_length=1)] = None
     help: str | None = None
     readOnly: bool | None = None
     onChange: OnChange2 | None = None
-    target: Target4 | Target5
-    type: Literal["number"]
-    default: float | None = None
+    type: Literal["integer"]
+    default: Annotated[int | None, Field(ge=-9007199254740991, le=9007199254740991)] = None
     min: float | None = None
     max: float | None = None
     step: Annotated[float | None, Field(gt=0.0)] = None
@@ -179,33 +142,21 @@ class OnChange3(BaseModel):
     reload: list[ReloadItem] | None = None
 
 
-class Target6(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    store: Literal[True]
-
-
-class Target7(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    system: Literal["wifi", "hostname", "timezone"]
-
-
-class Settings3(BaseModel):
+class Items2(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
     key: Annotated[str, Field(pattern="^[A-Za-z_][A-Za-z0-9_.-]{0,63}$")]
     label: Annotated[str, Field(min_length=1)]
-    group: Annotated[str | None, Field(min_length=1)] = None
     help: str | None = None
     readOnly: bool | None = None
     onChange: OnChange3 | None = None
-    target: Target6 | Target7
-    type: Literal["boolean"]
-    default: bool | None = None
+    type: Literal["number"]
+    default: float | None = None
+    min: float | None = None
+    max: float | None = None
+    step: Annotated[float | None, Field(gt=0.0)] = None
+    unit: str | None = None
 
 
 class OnChange4(BaseModel):
@@ -216,42 +167,17 @@ class OnChange4(BaseModel):
     reload: list[ReloadItem] | None = None
 
 
-class Target8(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    store: Literal[True]
-
-
-class Target9(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    system: Literal["wifi", "hostname", "timezone"]
-
-
-class Option(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    value: str
-    label: Annotated[str, Field(min_length=1)]
-
-
-class Settings4(BaseModel):
+class Items3(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
     key: Annotated[str, Field(pattern="^[A-Za-z_][A-Za-z0-9_.-]{0,63}$")]
     label: Annotated[str, Field(min_length=1)]
-    group: Annotated[str | None, Field(min_length=1)] = None
     help: str | None = None
     readOnly: bool | None = None
     onChange: OnChange4 | None = None
-    target: Target8 | Target9
-    type: Literal["select"]
-    default: str | None = None
-    options: Annotated[list[Option] | None, Field(min_length=1)] = None
+    type: Literal["boolean"]
+    default: bool | None = None
 
 
 class OnChange5(BaseModel):
@@ -262,42 +188,36 @@ class OnChange5(BaseModel):
     reload: list[ReloadItem] | None = None
 
 
-class Target10(BaseModel):
+class Option(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
-    store: Literal[True]
+    value: str
+    label: Annotated[str, Field(min_length=1)]
 
 
-class Target11(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    system: Literal["wifi", "hostname", "timezone"]
-
-
-class Default(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    ssid: Annotated[str, Field(min_length=1)]
-    password: str | None = None
-    hidden: bool | None = None
-
-
-class Settings5(BaseModel):
+class Items4(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
     key: Annotated[str, Field(pattern="^[A-Za-z_][A-Za-z0-9_.-]{0,63}$")]
     label: Annotated[str, Field(min_length=1)]
-    group: Annotated[str | None, Field(min_length=1)] = None
     help: str | None = None
     readOnly: bool | None = None
     onChange: OnChange5 | None = None
-    target: Target10 | Target11
-    type: Literal["wifi"]
-    default: Default | None = None
+    type: Literal["select"]
+    default: str | None = None
+    options: Annotated[list[Option], Field(min_length=1)]
+
+
+class AppSetting(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    groupName: Annotated[str, Field(min_length=1)]
+    help: str | None = None
+    onChange: OnChange | None = None
+    items: Annotated[list[Items | Items1 | Items2 | Items3 | Items4], Field(min_length=1)]
 
 
 class ConfigFile(BaseModel):
@@ -309,9 +229,6 @@ class ConfigFile(BaseModel):
     bluetooth: Bluetooth
     access: Access
     deviceDescription: Annotated[str | None, Field(max_length=1000)] = None
-    permissions: Annotated[Permissions | None, Field(validate_default=True)] = {
-        "allowReboot": False,
-        "allowAccessChanges": False,
-    }
     export: Export | None = None
-    settings: list[Settings | Settings1 | Settings2 | Settings3 | Settings4 | Settings5]
+    deviceSettings: DeviceSettings | None = None
+    appSettings: list[AppSetting] | None = None

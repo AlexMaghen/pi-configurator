@@ -103,13 +103,13 @@ async def test_startup_survives_missing_env_dir(make_world: MakeWorld, tmp_path:
 
 async def test_first_start_defaults_once(world: World) -> None:
     applied = await world.service.apply_first_start_defaults()
-    assert applied == ["wifi", "hostname", "tz"]
+    assert applied == ["hostname", "timezone"]
     assert world.hostname.name == "testpi"
     assert world.timezone.zone == "America/Los_Angeles"
-    assert world.wifi.connects == [("Home", "home-password", False)]
+    assert world.wifi.connects == []  # Wi-Fi has no default
     assert world.service.state.first_start_defaults_applied
     state = world.service.state.load()
-    assert state["firstStartDefaults"] == ["wifi", "hostname", "tz"]
+    assert state["firstStartDefaults"] == ["hostname", "timezone"]
 
     world.hostname.name = "raspberrypi"
     assert await world.service.apply_first_start_defaults() == []

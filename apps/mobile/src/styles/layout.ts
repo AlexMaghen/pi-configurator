@@ -31,6 +31,7 @@ export const useLayoutStyles = createStyles((t) => ({
     letterSpacing: 0.5,
     marginLeft: t.space.lg,
   },
+  /** The muted note under a section's card, and under its title (Section `description`). */
   sectionFooter: { fontSize: t.fontSize.small, color: t.colors.textMuted, marginHorizontal: t.space.lg },
   /** The rounded card that holds rows. */
   card: {

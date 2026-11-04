@@ -1,14 +1,15 @@
-"""`pi-configurator fields-from-pydantic module:Class`: config field entries from a settings class.
+"""`pi-configurator fields-from-pydantic module:Class`: an appSettings group from a settings class.
 
-Reads a pydantic (or pydantic-settings) model's fields and prints `settings` entries for
-config.json, so a device that already has a settings class (BallsPi) doesn't have to type them
-out. The keys are the environment variable names pydantic-settings reads (env_prefix + field
-name, upper-cased unless the class is case-sensitive), which is what the env-file export writes.
+Reads a pydantic (or pydantic-settings) model's fields and prints one `appSettings` group for
+config.json (its name, the units to restart or reload, and an item per field), so a device that
+already has a settings class (BallsPi) doesn't have to type them out. The keys are the
+environment variable names pydantic-settings reads (env_prefix + field name, upper-cased unless
+the class is case-sensitive), which is what the env-file export writes.
 
 Mapping: str/Path -> string, int -> integer, float -> number, bool -> boolean, Literal or Enum
 of strings -> select, SecretStr -> secret string; `X | None` is treated as X. Ge/Gt/Le/Lt become
 min/max, min_length/max_length/pattern carry over. Anything else (lists, dicts, nested models)
-is skipped with a note on stderr. Every entry targets the store; edit the output as needed.
+is skipped with a note on stderr. Edit the output as needed.
 """
 
 import enum
@@ -123,32 +124,32 @@ def field_entry(model: type[BaseModel], name: str, info: FieldInfo) -> JsonObjec
     _apply_metadata(entry, info)
     if default is not None and not (isinstance(default, bool) and entry["type"] != "boolean"):
         entry["default"] = default
-    entry["target"] = {"store": True}
     return entry
 
 
-def fields_from_model(
+def group_from_model(
     model: type[BaseModel],
     group: str | None = None,
     restart: list[str] | None = None,
     reload: list[str] | None = None,
-) -> tuple[list[Json], list[str]]:
-    """Returns (entries, names of skipped fields)."""
-    entries: list[Json] = []
+) -> tuple[JsonObject, list[str]]:
+    """Returns (the group, names of skipped fields). The group is named after the class unless
+    `group` names it; `restart` and `reload` become the group's onChange."""
+    items: list[Json] = []
     skipped: list[str] = []
     for name, info in model.model_fields.items():
         entry = field_entry(model, name, info)
         if entry is None:
             skipped.append(name)
             continue
-        if group:
-            entry["group"] = group
-        on_change: dict[str, Json] = {}
-        if restart:
-            on_change["restart"] = [*restart]
-        if reload:
-            on_change["reload"] = [*reload]
-        if on_change:
-            entry["onChange"] = on_change
-        entries.append(entry)
-    return entries, skipped
+        items.append(entry)
+    out: JsonObject = {"groupName": group or model.__name__}
+    on_change: JsonObject = {}
+    if restart:
+        on_change["restart"] = [*restart]
+    if reload:
+        on_change["reload"] = [*reload]
+    if on_change:
+        out["onChange"] = on_change
+    out["items"] = items
+    return out, skipped

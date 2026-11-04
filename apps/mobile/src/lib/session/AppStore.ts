@@ -1,18 +1,21 @@
 /**
  * AppStore: the app's state outside React. Owns the scan, one `DeviceLink` per device, and per
- * device: the session phase, the described fields, current values, unsaved drafts and the status
+ * device: the session phase, the described settings, current values, unsaved drafts and the status
  * activity log. Screens read it through `useAppState` (useSyncExternalStore) and call its methods.
  *
  * State is replaced, never mutated, so React sees every change. Passwords are reached through
  * the `PasswordVault` interface (SecureStore in the app, a Map in tests).
  */
 import {
-  type DescribedField,
+  appItems,
+  deviceFields,
   type DeviceInfo,
+  type DeviceSettings,
+  type FormField,
   type MethodName,
   type MethodParams,
   type MethodResult,
-  type Permissions,
+  type SettingGroup,
   type SettingValue,
   type StatusEvent,
   type ValueState,
@@ -43,8 +46,12 @@ export interface DeviceSession {
   /** Why the session or connection ended, shown on the unlock screen. */
   notice?: string;
   info?: DeviceInfo;
-  fields?: DescribedField[];
-  permissions?: Permissions;
+  /** The config's `deviceSettings`, from settings.describe: Device & Network. */
+  deviceSettings?: DeviceSettings;
+  /** The config's `appSettings` groups: Application Settings. */
+  appSettings?: SettingGroup[];
+  /** Every field on both tabs: the Pi's own settings that are on, then every app item. */
+  fields?: FormField[];
   /** The device's own description (config `deviceDescription`), shown under its name. */
   description?: string;
   values?: Record<string, ValueState>;
@@ -293,11 +300,12 @@ export class AppStore {
     return link.call(method, params);
   }
 
-  /** Loads the field list and all current values. */
+  /** Loads the settings description and all current values. */
   async load(id: string): Promise<void> {
-    const { fields, permissions, description } = await this.call(id, "settings.describe", {});
+    const { deviceSettings, appSettings, deviceDescription, timezones } = await this.call(id, "settings.describe", {});
     const { values } = await this.call(id, "settings.get", {});
-    this.patchSession(id, { fields, permissions, description, values });
+    const fields = [...deviceFields(deviceSettings, timezones), ...appItems(appSettings)];
+    this.patchSession(id, { deviceSettings, appSettings, fields, description: deviceDescription, values });
   }
 
   async refreshValues(id: string, keys?: string[]): Promise<void> {
@@ -349,7 +357,7 @@ export class AppStore {
     try {
       let outcome: SaveOutcome;
       try {
-        const { results, restarted, reloaded = [] } = await this.call(id, "settings.set", { values });
+        const { results, restarted, reloaded } = await this.call(id, "settings.set", { values });
         outcome = { saved: [], failed: {}, restarted, reloaded };
         for (const key of keys) {
           const result = results[key];

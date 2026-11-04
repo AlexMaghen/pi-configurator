@@ -6,7 +6,7 @@
  * before it are sent in plain text; everything else is refused until the session is unlocked.
  */
 import { z } from "zod";
-import { BluetoothName, Field, Permissions, WifiValue } from "./config";
+import { BluetoothName, DeviceSettings, SettingGroup, WifiValue } from "./config";
 
 export const PROTOCOL_VERSION = 1;
 
@@ -69,13 +69,6 @@ export const WifiValueState = z.object({
 export const ValueState = z.union([PlainValueState, SecretValueState, WifiValueState]);
 export type ValueState = z.infer<typeof ValueState>;
 
-/**
- * A field as the phone sees it: identical to the config entry, except secret fields lose their
- * default and Wi-Fi fields lose the default password.
- */
-export const DescribedField = Field;
-export type DescribedField = z.infer<typeof DescribedField>;
-
 export const WifiNetwork = z.object({
   ssid: z.string(),
   signal: z.int().min(0).max(100),
@@ -118,15 +111,22 @@ export const Methods = {
     params: z.object({ M1: B64 }).strict(),
     result: z.object({ M2: B64, idleTimeoutS: z.int().positive() }),
   },
-  /** Timezone fields without `options` come back with the system's full list filled in. */
+  /**
+   * The config's two settings sections as they are in the file (a secret item's default is
+   * removed), plus the Pi's time zone list when the time zone setting is on. The phone draws
+   * Device & Network from `deviceSettings` (see device.ts) and Application Settings from
+   * `appSettings`.
+   */
   "settings.describe": {
     auth: true,
     params: Empty,
     result: z.object({
-      fields: z.array(DescribedField),
-      permissions: Permissions,
+      deviceSettings: DeviceSettings,
+      appSettings: z.array(SettingGroup),
       /** The config's `deviceDescription`, when it has one. */
-      description: z.string().optional(),
+      deviceDescription: z.string().optional(),
+      /** Every time zone the Pi knows, when `deviceSettings.timezone` is on. */
+      timezones: z.array(z.string()).optional(),
     }),
   },
   "settings.get": {
@@ -146,8 +146,8 @@ export const Methods = {
     result: z.object({
       results: z.record(z.string(), FieldResult),
       restarted: z.array(z.string()),
-      /** Units reloaded (onChange.reload). Optional: Pis before service 0.2 don't send it. */
-      reloaded: z.array(z.string()).optional(),
+      /** Units reloaded (onChange.reload). */
+      reloaded: z.array(z.string()),
     }),
   },
   "wifi.scan": {
@@ -165,19 +165,19 @@ export const Methods = {
     params: Empty,
     result: z.object({ sections: z.array(DetailSection) }),
   },
-  /** Only when `permissions.allowReboot`. The Pi answers, then reboots about 1 s later. */
+  /** Only when `deviceSettings.allowReboot`. The Pi answers, then reboots about 1 s later. */
   "system.reboot": {
     auth: true,
     params: Empty,
     result: z.object({ rebooting: z.literal(true) }),
   },
-  /** Only when `permissions.allowAccessChanges`. Ends every other session. */
+  /** Only when `deviceSettings.allowAccessChanges`. Ends every other session. */
   "access.setPassword": {
     auth: true,
     params: z.object({ password: z.string().min(1).max(128) }).strict(),
     result: Empty,
   },
-  /** Only when `permissions.allowAccessChanges`. The Pi re-advertises under the new name. */
+  /** Only when `deviceSettings.allowAccessChanges`. The Pi re-advertises under the new name. */
   "access.setName": {
     auth: true,
     params: z.object({ name: BluetoothName }).strict(),

@@ -1,5 +1,5 @@
 /**
- * Change password (only with `permissions.allowAccessChanges`). The new password goes through
+ * Change password (only with `deviceSettings.allowAccessChanges`). The new password goes through
  * the encrypted session; the Pi rewrites its config and ends every other session. This phone's
  * saved password is updated so auto-unlock keeps working.
  */

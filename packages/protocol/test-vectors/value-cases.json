@@ -1,35 +1,323 @@
 {
   "description": "validateValue(field, value): 'ok' true when accepted. Both implementations must agree on acceptance; messages may differ.",
   "cases": [
-    { "field": { "key": "s", "label": "S", "type": "string", "minLength": 2, "maxLength": 4, "target": { "store": true } }, "value": "abc", "ok": true },
-    { "field": { "key": "s", "label": "S", "type": "string", "minLength": 2, "target": { "store": true } }, "value": "a", "ok": false },
-    { "field": { "key": "s", "label": "S", "type": "string", "maxLength": 2, "target": { "store": true } }, "value": "abc", "ok": false },
-    { "field": { "key": "s", "label": "S", "type": "string", "pattern": "^[0-9]+$", "target": { "store": true } }, "value": "123", "ok": true },
-    { "field": { "key": "s", "label": "S", "type": "string", "pattern": "^[0-9]+$", "target": { "store": true } }, "value": "12a", "ok": false },
-    { "field": { "key": "s", "label": "S", "type": "string", "target": { "store": true } }, "value": 5, "ok": false },
-    { "field": { "key": "u", "label": "U", "type": "string", "format": "url", "target": { "store": true } }, "value": "https://example.com/x", "ok": true },
-    { "field": { "key": "u", "label": "U", "type": "string", "format": "url", "target": { "store": true } }, "value": "", "ok": true },
-    { "field": { "key": "u", "label": "U", "type": "string", "format": "url", "target": { "store": true } }, "value": "example.com", "ok": false },
-    { "field": { "key": "e", "label": "E", "type": "string", "format": "email", "target": { "store": true } }, "value": "a@b.co", "ok": true },
-    { "field": { "key": "e", "label": "E", "type": "string", "format": "email", "target": { "store": true } }, "value": "a@b", "ok": false },
-    { "field": { "key": "i", "label": "I", "type": "integer", "min": 0, "max": 10, "target": { "store": true } }, "value": 10, "ok": true },
-    { "field": { "key": "i", "label": "I", "type": "integer", "min": 0, "max": 10, "target": { "store": true } }, "value": 11, "ok": false },
-    { "field": { "key": "i", "label": "I", "type": "integer", "target": { "store": true } }, "value": 1.5, "ok": false },
-    { "field": { "key": "i", "label": "I", "type": "integer", "target": { "store": true } }, "value": "3", "ok": false },
-    { "field": { "key": "i", "label": "I", "type": "integer", "target": { "store": true } }, "value": true, "ok": false },
-    { "field": { "key": "i", "label": "I", "type": "integer", "min": 100, "step": 50, "target": { "store": true } }, "value": 250, "ok": true },
-    { "field": { "key": "i", "label": "I", "type": "integer", "min": 100, "step": 50, "target": { "store": true } }, "value": 260, "ok": false },
-    { "field": { "key": "n", "label": "N", "type": "number", "min": 0, "max": 1, "step": 0.1, "target": { "store": true } }, "value": 0.3, "ok": true },
-    { "field": { "key": "n", "label": "N", "type": "number", "target": { "store": true } }, "value": 2.5, "ok": true },
-    { "field": { "key": "b", "label": "B", "type": "boolean", "target": { "store": true } }, "value": false, "ok": true },
-    { "field": { "key": "b", "label": "B", "type": "boolean", "target": { "store": true } }, "value": "false", "ok": false },
-    { "field": { "key": "m", "label": "M", "type": "select", "options": [{ "value": "a", "label": "A" }], "target": { "store": true } }, "value": "a", "ok": true },
-    { "field": { "key": "m", "label": "M", "type": "select", "options": [{ "value": "a", "label": "A" }], "target": { "store": true } }, "value": "b", "ok": false },
-    { "field": { "key": "w", "label": "W", "type": "wifi", "target": { "system": "wifi" } }, "value": { "ssid": "Home", "password": "12345678" }, "ok": true },
-    { "field": { "key": "w", "label": "W", "type": "wifi", "target": { "system": "wifi" } }, "value": { "ssid": "Cafe" }, "ok": true },
-    { "field": { "key": "w", "label": "W", "type": "wifi", "target": { "system": "wifi" } }, "value": { "ssid": "Home", "password": "short" }, "ok": false },
-    { "field": { "key": "w", "label": "W", "type": "wifi", "target": { "system": "wifi" } }, "value": { "ssid": "" }, "ok": false },
-    { "field": { "key": "w", "label": "W", "type": "wifi", "target": { "system": "wifi" } }, "value": { "ssid": "Home", "extra": 1 }, "ok": false },
-    { "field": { "key": "r", "label": "R", "type": "string", "readOnly": true, "target": { "store": true } }, "value": "x", "ok": false }
+    {
+      "field": {
+        "key": "s",
+        "label": "S",
+        "type": "string",
+        "minLength": 2,
+        "maxLength": 4
+      },
+      "value": "abc",
+      "ok": true
+    },
+    {
+      "field": {
+        "key": "s",
+        "label": "S",
+        "type": "string",
+        "minLength": 2
+      },
+      "value": "a",
+      "ok": false
+    },
+    {
+      "field": {
+        "key": "s",
+        "label": "S",
+        "type": "string",
+        "maxLength": 2
+      },
+      "value": "abc",
+      "ok": false
+    },
+    {
+      "field": {
+        "key": "s",
+        "label": "S",
+        "type": "string",
+        "pattern": "^[0-9]+$"
+      },
+      "value": "123",
+      "ok": true
+    },
+    {
+      "field": {
+        "key": "s",
+        "label": "S",
+        "type": "string",
+        "pattern": "^[0-9]+$"
+      },
+      "value": "12a",
+      "ok": false
+    },
+    {
+      "field": {
+        "key": "s",
+        "label": "S",
+        "type": "string"
+      },
+      "value": 5,
+      "ok": false
+    },
+    {
+      "field": {
+        "key": "u",
+        "label": "U",
+        "type": "string",
+        "format": "url"
+      },
+      "value": "https://example.com/x",
+      "ok": true
+    },
+    {
+      "field": {
+        "key": "u",
+        "label": "U",
+        "type": "string",
+        "format": "url"
+      },
+      "value": "",
+      "ok": true
+    },
+    {
+      "field": {
+        "key": "u",
+        "label": "U",
+        "type": "string",
+        "format": "url"
+      },
+      "value": "example.com",
+      "ok": false
+    },
+    {
+      "field": {
+        "key": "e",
+        "label": "E",
+        "type": "string",
+        "format": "email"
+      },
+      "value": "a@b.co",
+      "ok": true
+    },
+    {
+      "field": {
+        "key": "e",
+        "label": "E",
+        "type": "string",
+        "format": "email"
+      },
+      "value": "a@b",
+      "ok": false
+    },
+    {
+      "field": {
+        "key": "i",
+        "label": "I",
+        "type": "integer",
+        "min": 0,
+        "max": 10
+      },
+      "value": 10,
+      "ok": true
+    },
+    {
+      "field": {
+        "key": "i",
+        "label": "I",
+        "type": "integer",
+        "min": 0,
+        "max": 10
+      },
+      "value": 11,
+      "ok": false
+    },
+    {
+      "field": {
+        "key": "i",
+        "label": "I",
+        "type": "integer"
+      },
+      "value": 1.5,
+      "ok": false
+    },
+    {
+      "field": {
+        "key": "i",
+        "label": "I",
+        "type": "integer"
+      },
+      "value": "3",
+      "ok": false
+    },
+    {
+      "field": {
+        "key": "i",
+        "label": "I",
+        "type": "integer"
+      },
+      "value": true,
+      "ok": false
+    },
+    {
+      "field": {
+        "key": "i",
+        "label": "I",
+        "type": "integer",
+        "min": 100,
+        "step": 50
+      },
+      "value": 250,
+      "ok": true
+    },
+    {
+      "field": {
+        "key": "i",
+        "label": "I",
+        "type": "integer",
+        "min": 100,
+        "step": 50
+      },
+      "value": 260,
+      "ok": false
+    },
+    {
+      "field": {
+        "key": "n",
+        "label": "N",
+        "type": "number",
+        "min": 0,
+        "max": 1,
+        "step": 0.1
+      },
+      "value": 0.3,
+      "ok": true
+    },
+    {
+      "field": {
+        "key": "n",
+        "label": "N",
+        "type": "number"
+      },
+      "value": 2.5,
+      "ok": true
+    },
+    {
+      "field": {
+        "key": "b",
+        "label": "B",
+        "type": "boolean"
+      },
+      "value": false,
+      "ok": true
+    },
+    {
+      "field": {
+        "key": "b",
+        "label": "B",
+        "type": "boolean"
+      },
+      "value": "false",
+      "ok": false
+    },
+    {
+      "field": {
+        "key": "m",
+        "label": "M",
+        "type": "select",
+        "options": [
+          {
+            "value": "a",
+            "label": "A"
+          }
+        ]
+      },
+      "value": "a",
+      "ok": true
+    },
+    {
+      "field": {
+        "key": "m",
+        "label": "M",
+        "type": "select",
+        "options": [
+          {
+            "value": "a",
+            "label": "A"
+          }
+        ]
+      },
+      "value": "b",
+      "ok": false
+    },
+    {
+      "field": {
+        "key": "wifi",
+        "type": "wifi",
+        "label": "W"
+      },
+      "value": {
+        "ssid": "Home",
+        "password": "12345678"
+      },
+      "ok": true
+    },
+    {
+      "field": {
+        "key": "wifi",
+        "type": "wifi",
+        "label": "W"
+      },
+      "value": {
+        "ssid": "Cafe"
+      },
+      "ok": true
+    },
+    {
+      "field": {
+        "key": "wifi",
+        "type": "wifi",
+        "label": "W"
+      },
+      "value": {
+        "ssid": "Home",
+        "password": "short"
+      },
+      "ok": false
+    },
+    {
+      "field": {
+        "key": "wifi",
+        "type": "wifi",
+        "label": "W"
+      },
+      "value": {
+        "ssid": ""
+      },
+      "ok": false
+    },
+    {
+      "field": {
+        "key": "wifi",
+        "type": "wifi",
+        "label": "W"
+      },
+      "value": {
+        "ssid": "Home",
+        "extra": 1
+      },
+      "ok": false
+    },
+    {
+      "field": {
+        "key": "r",
+        "label": "R",
+        "type": "string",
+        "readOnly": true
+      },
+      "value": "x",
+      "ok": false
+    }
   ]
 }

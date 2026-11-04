@@ -1,5 +1,5 @@
 /**
- * Rename device (only with `permissions.allowAccessChanges`): sets the Bluetooth name. It has to
+ * Rename device (only with `deviceSettings.allowAccessChanges`): sets the Bluetooth name. It has to
  * fit next to the service UUID in the scan response, so it's limited to 29 bytes of UTF-8.
  */
 import { useState } from "react";

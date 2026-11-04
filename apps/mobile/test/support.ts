@@ -3,7 +3,16 @@ import { randomBytes as nodeRandom } from "node:crypto";
 import { DemoPi } from "../src/lib/demo/DemoPi";
 import { demoConfig, DEMO_PASSWORD } from "../src/lib/demo/demoConfig";
 import { DeviceLink } from "../src/lib/link/DeviceLink";
-import type { Config, Field } from "@pi-configurator/protocol";
+import {
+  appItems,
+  deviceFields,
+  itemOnChange,
+  type Config,
+  type DeviceSettings,
+  type FormField,
+  type SettingGroup,
+  type SettingItem,
+} from "@pi-configurator/protocol";
 
 export const randomBytes = (n: number) => new Uint8Array(nodeRandom(n));
 
@@ -18,47 +27,66 @@ export class Clock {
 export const NO_DELAYS = { frame: 0, wifiScan: 0, wifiJoin: 0, restart: 0, rebootDrop: 20, rebootDown: 1000 };
 
 /**
- * The example file has no secret field, so tests add one to cover "set / not set" and
- * replace-only behavior. Everything else comes from config-template/config.json.
+ * The example file has no secret field, so tests add a group with one to cover "set / not set"
+ * and replace-only behavior. Everything else comes from config-template/config.json.
  */
-export const SECRET_FIELD: Field = {
+export const SECRET_FIELD: SettingItem = {
   key: "TEST_API_KEY",
   label: "API key",
-  group: "Test",
   type: "string",
   secret: true,
   default: "hidden-default",
-  target: { store: true },
+};
+export const SECRET_GROUP: SettingGroup = {
+  groupName: "Test",
+  help: "Only in the tests.",
   onChange: { restart: ["test.service"] },
+  items: [SECRET_FIELD],
 };
 
-export function testConfig(permissions?: Partial<Config["permissions"]>): Config {
-  const config = demoConfig(permissions);
-  return { ...config, settings: [...config.settings, SECRET_FIELD] };
+export function testConfig(deviceSettings?: Partial<DeviceSettings>): Config {
+  const config = demoConfig(deviceSettings);
+  return { ...config, appSettings: [...(config.appSettings ?? []), SECRET_GROUP] };
+}
+
+/** Every field the test device shows, in order: the Pi's own settings, then the app items. */
+export const testFields = (deviceSettings?: Partial<DeviceSettings>): FormField[] => {
+  const config = testConfig(deviceSettings);
+  return [...deviceFields(config.deviceSettings), ...appItems(config.appSettings)];
+};
+
+/** The units a change to `key` restarts: the item's own onChange, else its group's. */
+export function restartsOf(key: string): string[] {
+  for (const group of testConfig().appSettings ?? []) {
+    const item = group.items.find((i) => i.key === key);
+    if (item) return itemOnChange(group, item)?.restart ?? [];
+  }
+  return [];
 }
 
 /** Fields of the example file, picked by what a test needs rather than by key. */
-const fileFields = () => demoConfig().settings;
+const fileItems = () => appItems(demoConfig().appSettings);
+const fileFields = () => deviceFields(demoConfig().deviceSettings);
 export const pick = {
-  /** A store number field with min, max and step. */
+  /** A number item with min, max and step. */
   number: () => {
-    const f = fileFields().find(
-      (x) => (x.type === "number" || x.type === "integer") && "store" in x.target && x.min !== undefined && x.max !== undefined && x.step !== undefined,
+    const f = fileItems().find(
+      (x) => (x.type === "number" || x.type === "integer") && x.min !== undefined && x.max !== undefined && x.step !== undefined,
     );
     if (!f || (f.type !== "number" && f.type !== "integer")) throw new Error("example has no bounded number field");
     return f;
   },
   url: () => {
-    const f = fileFields().find((x) => x.type === "string" && x.format === "url" && "store" in x.target);
+    const f = fileItems().find((x) => x.type === "string" && x.format === "url");
     if (!f || f.type !== "string") throw new Error("example has no URL field");
     return f;
   },
-  hostname: () => fileFields().find((x) => "system" in x.target && x.target.system === "hostname")!,
-  timezone: () => fileFields().find((x) => "system" in x.target && x.target.system === "timezone")!,
+  hostname: () => fileFields().find((x) => x.key === "hostname")!,
+  timezone: () => fileFields().find((x) => x.key === "timezone")!,
   wifi: () => fileFields().find((x) => x.type === "wifi")!,
 };
 
-export function makePi(opts: { mtu?: number; permissions?: Partial<Config["permissions"]>; clock?: Clock } = {}) {
+export function makePi(opts: { mtu?: number; permissions?: Partial<DeviceSettings>; clock?: Clock } = {}) {
   const clock = opts.clock ?? new Clock();
   const pi = new DemoPi({
     config: testConfig(opts.permissions),

@@ -44,123 +44,124 @@ Edited by hand or by a device's install script, not by the phone (v1).
   "access": {
     "password": "1234"
   },
-  "permissions": {
-    "allowReboot": false,
-    "allowAccessChanges": false
-  },
   "export": {
     "envFile": "/var/lib/pi-configurator/ballspi.env"
   },
-  "settings": [
+  "deviceSettings": {
+    "wifi": true,
+    "hostname": { "label": "Device hostname", "default": "ballspi" },
+    "timezone": true,
+    "allowReboot": false,
+    "allowAccessChanges": false
+  },
+  "appSettings": [
     {
-      "key": "wifi",
-      "label": "Wi-Fi network",
-      "group": "Network",
-      "type": "wifi",
-      "target": { "system": "wifi" }
+      "groupName": "Balls",
+      "onChange": { "restart": ["studfs-robots.service"] },
+      "items": [
+        {
+          "key": "BALLS_DISPENSE_MS",
+          "label": "Dispense time",
+          "help": "How long the gate stays open per ball.",
+          "type": "integer",
+          "min": 100,
+          "max": 5000,
+          "unit": "ms",
+          "default": 800
+        }
+      ]
     },
     {
-      "key": "hostname",
-      "label": "Device hostname",
-      "group": "Network",
-      "type": "string",
-      "pattern": "^[a-z0-9-]{1,63}$",
-      "default": "ballspi",
-      "target": { "system": "hostname" }
-    },
-    {
-      "key": "BALLS_DISPENSE_MS",
-      "label": "Dispense time",
-      "help": "How long the gate stays open per ball.",
-      "group": "Balls",
-      "type": "integer",
-      "min": 100,
-      "max": 5000,
-      "unit": "ms",
-      "default": 800,
-      "target": { "store": true },
-      "onChange": { "restart": ["studfs-robots.service"] }
-    },
-    {
-      "key": "PLAYSTREAM_URL",
-      "label": "Stream URL",
-      "group": "Stream",
-      "type": "string",
-      "format": "url",
-      "default": "",
-      "target": { "store": true }
-    },
-    {
-      "key": "HK_API_KEY",
-      "label": "API key",
-      "group": "HomeKit",
-      "type": "string",
-      "secret": true,
-      "target": { "store": true }
+      "groupName": "Stream",
+      "items": [
+        { "key": "PLAYSTREAM_URL", "label": "Stream URL", "type": "string", "format": "url", "default": "" },
+        { "key": "HK_API_KEY", "label": "API key", "type": "string", "secret": true }
+      ]
     }
   ]
 }
 ```
 
-### 3.1 Field properties
+The file has two settings sections, one per tab in the app:
+
+- `deviceSettings` (**Device & Network**): which of the Pi's own settings (section 3.2) and
+  actions (section 3.1a) the phone offers. Their labels and help are fixed in the app; a config
+  can only replace a label.
+- `appSettings` (**Application Settings**): the device's own settings, in named groups, saved in
+  the key/value store for its programs (section 4).
+
+A tab with nothing on it is hidden. When Device & Network is hidden, the device's own section
+(Device Data, Activity, Disconnect) moves to the bottom of Application Settings.
+
+### 3.1 Groups and items
+
+A group:
 
 | Property | Required | Meaning |
 |---|---|---|
-| `key` | yes | Unique ID. For store fields it is also the key other apps read |
+| `groupName` | yes | Section heading; unique. Groups appear in the file's order |
+| `help` | no | One line under the heading |
+| `onChange` | no | What a change to any item in the group does (`restart`, `reload` below), unless the item has its own |
+| `items` | yes | At least one item, in order |
+
+An item:
+
+| Property | Required | Meaning |
+|---|---|---|
+| `key` | yes | Unique across all groups; the key other apps read. `wifi`, `hostname` and `timezone` are reserved |
 | `label` | yes | Shown in the form |
-| `type` | yes | `string`, `integer`, `number`, `boolean`, `select`, `wifi` |
-| `target` | yes | `{ "system": "<handler>" }` or `{ "store": true }` |
+| `type` | yes | `string`, `integer`, `number`, `boolean`, `select` |
 | `default` | no | Initial value (section 3.3) |
-| `group` | no | Section heading in the form; groups appear in first-seen order |
 | `help` | no | One line under the field |
 | `secret` | no | Never sent back to the phone; the form shows "set" / "not set" and allows replacing it |
 | `min`, `max`, `step`, `unit` | no | Numbers. `unit` is a label shown beside the field ("s", "ms", "%"). With `min` of 0 or more the phone shows the number pad (`integer`) or the decimal pad (`number`); otherwise a keyboard with a minus sign |
 | `pattern`, `format`, `minLength`, `maxLength` | no | Strings; `format` is `url`, `email` or `multiline` |
-| `options` | for `select` | `[{ "value": "...", "label": "..." }]`. Up to 10 options show as a drop-down menu on the field; longer lists (e.g. time zones) open a searchable page |
+| `options` | for `select` | `[{ "value": "...", "label": "..." }]`. Up to 10 options show as a drop-down menu on the field; longer lists open a searchable page |
 | `readOnly` | no | Shown but not editable (e.g. a serial number) |
-| `onChange.restart` | no | systemd units to restart after this field changes (once per save, not per field) |
-| `onChange.reload` | no | systemd units to `systemctl reload` (ExecReload=, usually SIGHUP) after this field changes; a unit also under `restart` is only restarted |
+| `onChange.restart` | no | systemd units to restart after this item changes (once per save, not per item). Replaces the group's `onChange` |
+| `onChange.reload` | no | systemd units to `systemctl reload` (ExecReload=, usually SIGHUP) after this item changes; a unit also under `restart` is only restarted |
 
 The service rejects a config file that breaks these rules at startup, with a clear log message.
 
 `deviceDescription` (optional, up to 1,000 characters) is a few sentences about the device. The
-app shows it under the device name at the top of the device screen, in the help-text style. It
-reaches the phone in the `settings.describe` result as `description`.
+app shows it under the device name at the top of the device screen, in the help-text style.
 
 ### 3.1a Permissions
 
-Things the phone may do beyond editing fields. Both default to `false` when left out.
+Things the phone may do beyond editing settings, in `deviceSettings`. Both are off when left out.
 
 | Property | When `true` |
 |---|---|
-| `permissions.allowReboot` | The app shows a Reboot button; `system.reboot` asks for confirmation in the app, then reboots the Pi |
-| `permissions.allowAccessChanges` | The app can change the access password and the Bluetooth name. The service rewrites `config.json` atomically, re-advertises under the new name, and ends every other open session after a password change |
+| `deviceSettings.allowReboot` | The app shows a Reboot button; `system.reboot` asks for confirmation in the app, then reboots the Pi |
+| `deviceSettings.allowAccessChanges` | The app can change the access password and the Bluetooth name. The service rewrites `config.json` atomically, re-advertises under the new name, and ends every other open session after a password change |
 
-When a permission is `false`, the matching RPC method is refused and the app hides the control.
+When a permission is off, the matching RPC method is refused and the app hides the control.
 The phone can't change the permissions themselves; that is file-only.
 
-### 3.2 System handlers (v1)
+### 3.2 The Pi's own settings (v1)
 
-A field with `target.system` is applied by a handler built into the service:
+Each is `true`, an object (`label`, and `default` for hostname and time zone), or off. The
+service applies them itself; their keys in `settings.get` / `settings.set` are their names, and
+Device & Network shows them in this order:
 
-| Handler | Field type | What it does |
-|---|---|---|
-| `wifi` | `wifi` | Scan, join, forget, through NetworkManager (D-Bus). Value is `{ ssid, password, hidden }`; the password is always secret |
-| `hostname` | `string` | Sets the hostname (`hostnamectl`), keeps `/etc/hosts` in step |
-| `timezone` | `select` | `timedatectl set-timezone`; the options list can be left out to get the full list |
+| Setting | What it does |
+|---|---|
+| `wifi` | Scan, join, forget, through NetworkManager (D-Bus). Value is `{ ssid, password, hidden }`; the password is always secret |
+| `hostname` | Sets the hostname (`hostnamectl`), keeps `/etc/hosts` in step |
+| `timezone` | `timedatectl set-timezone`, from every zone the Pi knows |
 
-More handlers (Bluetooth name, SSH on/off, locale) can come later. A handler's current value is
-read live from the system, not from the store.
+More (Bluetooth name, SSH on/off, locale) can come later. Their current values are read live
+from the system, not from the store.
 
 ### 3.3 Defaults
 
-- **Store fields:** the store starts empty. Reading a key with no saved value returns the config
+- **App settings:** the store starts empty. Reading a key with no saved value returns the config
   default. Changing a default in the config takes effect for every key the phone never changed.
   Clearing a value in the app returns it to the default.
-- **System fields:** a default is applied **once**, on the service's first start, and only if the
-  system has nothing set (e.g. no Wi-Fi profile). After that the system's live value wins and the
-  default is only offered as a prefill. The service records "first-start defaults applied" in its
-  state file so this doesn't run again.
+- **Hostname and time zone:** a default is applied **once**, on the service's first start, and
+  only if the Pi is still on its factory value (hostname `raspberrypi`, time zone UTC). After
+  that the system's live value wins. The service records "first-start defaults applied" in its
+  state file so this doesn't run again. Wi-Fi has no default: Raspberry Pi Imager sets it.
 
 ## 4. The key/value store
 
@@ -225,13 +226,13 @@ RPC methods (all except the handshake require an unlocked session):
 | Method | Purpose |
 |---|---|
 | `auth.start`, `auth.finish` | Password handshake (section 6) |
-| `settings.describe` | The `settings` list from the config, without defaults of secret fields |
+| `settings.describe` | The config's `deviceSettings` and `appSettings` as written (secret items lose their default), `deviceDescription`, and the Pi's time zones when time zone is on |
 | `settings.get` | Current values; secret fields come back as `{ "set": true }` |
 | `settings.set` | Change some fields; validated, applied, returns per-field results |
 | `wifi.scan` | Nearby networks (SSID, signal, security) from the Pi's radio; iOS can't list them |
 | `system.details` | Read-only report for support (Device Data in the app): hardware, OS, network, Bluetooth, the service, as titled sections of label / value lines; lines the Pi can't read are left out |
-| `system.reboot` | Reboot the Pi; only if `permissions.allowReboot` |
-| `access.setPassword`, `access.setName` | Change the password or Bluetooth name; only if `permissions.allowAccessChanges` |
+| `system.reboot` | Reboot the Pi; only if `deviceSettings.allowReboot` |
+| `access.setPassword`, `access.setName` | Change the password or Bluetooth name; only if `deviceSettings.allowAccessChanges` |
 | `status` | Notifications: "Wi-Fi connecting", "connected, IP 192.168.1.40", "restarted studfs-robots" |
 
 ## 6. Security: password check without sending the password
@@ -274,8 +275,8 @@ the monorepo make sure both sides agree.
   - **Unlock**: password entry. Once it works, it's saved per device in the iOS Keychain /
     Android Keystore and used automatically next time; "Forget password" removes it. A saved
     password that stops working is dropped and the app asks again.
-  - **Settings**: the form, grouped by `group`, built from `settings.describe`. Save sends only
-    changed fields.
+  - **Settings**: Device & Network and Application Settings, built from `settings.describe`;
+    a tab with nothing on it is hidden. Save sends only changed fields.
   - **Wi-Fi**: scan list from the Pi, join, current connection.
   - **Status**: live notifications while applying.
 - Form controls by type: text, number with limits and unit, switch, picker, secret
@@ -314,8 +315,8 @@ and `datamodel-code-generator` turns that into pydantic models for the service. 
 if the generated Python is out of date.
 
 **The pydantic helper from the earlier discussion** becomes optional: a small command,
-`pi-configurator fields-from-pydantic module:Class`, prints field entries for the config file from
-a device's existing settings class. Useful for BallsPi; not required.
+`pi-configurator fields-from-pydantic module:Class`, prints an `appSettings` group for the config
+file from a device's existing settings class. Useful for BallsPi; not required.
 
 ## 9. Running on the Pi
 
@@ -338,16 +339,15 @@ a device's existing settings class. Useful for BallsPi; not required.
 
 ## 11. Answered questions (2026-11-01)
 
-1. **System-field defaults:** applied once on first start if the system has nothing set, then
-   prefill only.
+1. **System-setting defaults:** applied once on first start if the system has nothing set.
 2. **Changing the password or Bluetooth name from the phone:** controlled by
-   `permissions.allowAccessChanges`, default `false`.
+   `deviceSettings.allowAccessChanges`, default off.
 3. **Env-file export:** in v1.
 4. **Password in the config:** plain text only, no hashed form.
 5. **Saved passwords in the app:** remembered per device in the Keychain / Keystore, with
    "Forget password".
 6. **Git:** replace the leftover `.git` folder with a fresh repository (`main`) when coding starts.
-7. **Reboot:** controlled by `permissions.allowReboot`, default `false`.
+7. **Reboot:** controlled by `deviceSettings.allowReboot`, default off.
 
 ## 12. Still open
 

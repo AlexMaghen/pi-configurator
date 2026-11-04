@@ -5,8 +5,10 @@
  *   /                                 Devices: nearby devices from the scan
  *   /preferences                      App preferences (demo device switch, about)
  *   /device/[id]/unlock               Password entry; auto-unlocks with a saved password
- *   /device/[id]/device-network       Wi-Fi, hostname, time zone, then device info and actions
- *   /device/[id]/app-settings         The config's own settings (a segment beside device-network)
+ *   /device/[id]/device-network       Wi-Fi, hostname, time zone (those the config turns on),
+ *                                     then device info and actions
+ *   /device/[id]/app-settings         The config's appSettings groups (a segment beside
+ *                                     device-network; holds device info when that's hidden)
  *   /device/[id]/choose/[key]         Pick a value for a select field (searchable)
  *   /device/[id]/wifi                 Current connection and the Pi's Wi-Fi scan
  *   /device/[id]/wifi-join            Join one network (or a hidden one)

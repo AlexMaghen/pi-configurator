@@ -1,12 +1,11 @@
 /**
- * The settings form logic: grouping, parsing typed text, validation and change detection.
+ * The settings form logic: tabs, parsing typed text, validation and change detection.
  * Real fields come from config-template/config.json; a few synthetic fields cover cases the
- * example doesn't have (thousands in limits, secrets, ungrouped fields).
+ * example doesn't have (thousands in limits, secrets).
  */
 import { describe, expect, it } from "vitest";
-import { validateValue, type DescribedField, type ValueState } from "@pi-configurator/protocol";
+import { validateValue, type FormField, type ValueState } from "@pi-configurator/protocol";
 import {
-  groupFields,
   initialText,
   isSystemField,
   isChange,
@@ -17,15 +16,16 @@ import {
 } from "../src/lib/form/model";
 import { detailsText } from "../src/lib/format/details";
 import { formatNumber, parseNumber, percentBars, rssiBars } from "../src/lib/format/numbers";
-import { SECRET_FIELD, pick, testConfig } from "./support";
+import { deviceTabs } from "../src/lib/form/tabs";
+import { SECRET_FIELD, pick, testConfig, testFields } from "./support";
 
-const fields = testConfig().settings as DescribedField[];
+const fields = testFields();
 const num = pick.number();
 const url = pick.url();
 const hostname = pick.hostname();
 const timezone = pick.timezone();
 /** Not in the example: an integer with limits in the thousands. */
-const bigInt: DescribedField = {
+const bigInt: FormField = {
   key: "BIG",
   label: "Big",
   type: "integer",
@@ -34,7 +34,6 @@ const bigInt: DescribedField = {
   step: 50,
   unit: "ms",
   default: 800,
-  target: { store: true },
 };
 
 const plain = (value: unknown, source: "saved" | "default" | "system" | "none" = "saved") =>
@@ -70,20 +69,20 @@ describe("numbers", () => {
   });
 });
 
-describe("grouping", () => {
-  it("keeps first-seen group order and puts ungrouped fields in their own group", () => {
-    const extra = [...fields, { key: "loose", label: "Loose", type: "boolean", target: { store: true } } as DescribedField];
-    const firstSeen = [...new Set(fields.map((f) => f.group))];
-    const groups = groupFields(extra);
-    expect(groups.map((g) => g.title)).toEqual([...firstSeen, undefined]);
-    for (const g of groups.slice(0, -1)) {
-      expect(g.fields.map((f) => f.key)).toEqual(fields.filter((f) => f.group === g.title).map((f) => f.key));
-    }
-  });
-
+describe("tabs", () => {
   it("puts the OS settings on Device & Network and the rest on Application Settings", () => {
     expect(fields.filter(isSystemField).map((f) => f.key)).toEqual(["wifi", "hostname", "timezone"]);
-    expect(fields.filter((f) => !isSystemField(f)).every((f) => "store" in f.target)).toBe(true);
+    expect(fields.filter((f) => !isSystemField(f)).every((f) => f.type !== "wifi")).toBe(true);
+  });
+
+  it("hides a tab the config gives nothing to", () => {
+    const config = testConfig();
+    expect(deviceTabs(config)).toEqual(["device-network", "app-settings"]);
+    const off = { wifi: false, hostname: false, timezone: false, allowReboot: false, allowAccessChanges: false };
+    expect(deviceTabs({ ...config, deviceSettings: off })).toEqual(["app-settings"]);
+    expect(deviceTabs({ ...config, appSettings: [] })).toEqual(["device-network"]);
+    // With neither, Application Settings stays to hold the device's info and actions.
+    expect(deviceTabs({ deviceSettings: off, appSettings: [] })).toEqual(["app-settings"]);
   });
 });
 
@@ -120,7 +119,7 @@ describe("drafts", () => {
     expect(isChange(num, plain(d, "default"), { kind: "text", text: String(d + num.step!) })).toBe(true);
     expect(isChange(num, plain(d, "default"), { kind: "reset" })).toBe(false);
     expect(isChange(num, plain(d + num.step!, "saved"), { kind: "reset" })).toBe(true);
-    const secret = SECRET_FIELD as DescribedField;
+    const secret = SECRET_FIELD;
     const secretState = { secret: true, set: true, source: "saved" } as ValueState;
     expect(isChange(secret, secretState, { kind: "text", text: "" })).toBe(false);
     expect(isChange(secret, secretState, { kind: "text", text: "new" })).toBe(true);

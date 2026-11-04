@@ -25,11 +25,9 @@ from ..protocol.config import (
     MAX_BLUETOOTH_NAME_BYTES,
     ConfigInvalid,
     LoadedConfig,
-    SelectField,
     SettingField,
-    StringField,
-    WifiField,
-    handler_of,
+    SystemSetting,
+    wifi_value_error,
 )
 from ..protocol.gatt import SESSION_IDLE_TIMEOUT_S, UNLOCK_TIMEOUT_S
 from ..protocol.jsonutil import Json, JsonObject, b64decode, b64encode, utf8_length
@@ -49,7 +47,7 @@ from ..protocol.rpc import (
     status_event,
 )
 from ..protocol.srp import SrpError, SrpServer, SrpVerifier
-from ..protocol.values import describe_field, is_secret, normalize_value, validate_value
+from ..protocol.values import describe_groups, is_secret, normalize_value, validate_value
 from ..system.commands import HOSTNAME_RE
 from ..system.interfaces import AdapterError, SystemAdapters
 from .backoff import AuthBackoff
@@ -67,9 +65,9 @@ UNSET_TIMEZONES: Final = frozenset({"", "UTC", "Etc/UTC", "Universal", "Etc/Univ
 #: The example password from the docs; the service warns while it is still in use.
 EXAMPLE_PASSWORDS: Final = frozenset({"1234", "change-me-1234"})
 
-# Order system handlers are applied in a save: quick ones first, Wi-Fi (slow, may drop the
+# Order the Pi's own settings are applied in a save: quick ones first, Wi-Fi (slow, may drop the
 # phone's link when the radio retunes) last.
-_HANDLER_ORDER: Final = {"hostname": 0, "timezone": 1, "wifi": 2}
+_SYSTEM_ORDER: Final[dict[SystemSetting, int]] = {"hostname": 0, "timezone": 1, "wifi": 2}
 
 NameChanged = Callable[[str], Awaitable[None]]
 #: Called with the store keys whose saved value changed, after values.json is written.
@@ -197,27 +195,28 @@ class Service:
                 self._write_env()
 
     def start_first_start_defaults(self) -> None:
-        """Applies system-field defaults once, in the background (Wi-Fi can take a while)."""
+        """Applies the hostname and time zone defaults once, in the background."""
         if self.state.first_start_defaults_applied:
             return
         self._spawn(self.apply_first_start_defaults())
 
     async def apply_first_start_defaults(self) -> list[str]:
-        """Applies each system field's default if the system has nothing set, then records that
-        this has happened so it never runs again (design.md 3.3). Returns the keys applied."""
+        """Applies the `deviceSettings` hostname and time zone defaults if the Pi has nothing set,
+        then records that this has happened so it never runs again (design.md 3.3). Returns the
+        settings applied."""
         applied: list[str] = []
         async with self._lock:
             if self.state.first_start_defaults_applied:
                 return applied
-            for f in self.config.fields:
-                handler = handler_of(f)
-                if handler is None or f.default is None:
+            for setting in self.config.system:
+                default = self.config.system_default(setting)
+                if default is None:
                     continue
                 try:
-                    if await self._apply_first_default(f):
-                        applied.append(f.key)
+                    if await self._apply_first_default(setting, default):
+                        applied.append(setting)
                 except Exception as err:
-                    log.warning("first-start default for %s failed: %s", f.key, err)
+                    log.warning("first-start default for %s failed: %s", setting, err)
             try:
                 self.state.mark_first_start_defaults_applied(applied)
             except OSError:
@@ -226,27 +225,17 @@ class Service:
             log.info("applied first-start defaults: %s", ", ".join(applied))
         return applied
 
-    async def _apply_first_default(self, f: SettingField) -> bool:
-        handler, sys = handler_of(f), self.system
-        if handler == "hostname" and isinstance(f, StringField) and f.default is not None:
+    async def _apply_first_default(self, setting: SystemSetting, default: str) -> bool:
+        sys = self.system
+        if setting == "hostname":
             if (await sys.hostname.get()).lower() not in UNSET_HOSTNAMES:
                 return False
-            await sys.hostname.set(f.default)
+            await sys.hostname.set(default)
             return True
-        if handler == "timezone" and isinstance(f, SelectField) and f.default is not None:
+        if setting == "timezone":
             if await sys.timezone.get() not in UNSET_TIMEZONES:
                 return False
-            await sys.timezone.set(f.default)
-            return True
-        if handler == "wifi" and isinstance(f, WifiField) and f.default is not None:
-            if await sys.wifi.has_saved_networks():
-                return False
-            d = f.default
-            result = await sys.wifi.connect(
-                d.ssid, d.password if d.password is not None else "", bool(d.hidden)
-            )
-            if not result.ok:
-                log.warning("first-start Wi-Fi %s: %s", d.ssid, result.error)
+            await sys.timezone.set(default)
             return True
         return False
 
@@ -276,7 +265,7 @@ class Service:
     # -- store ---------------------------------------------------------------------------------
 
     def _store_fields(self) -> list[SettingField]:
-        return [f for f in self.config.fields if handler_of(f) is None]
+        return self.config.fields
 
     def _defaults(self) -> dict[str, Json]:
         return {f.key: cast(Json, f.default) for f in self._store_fields() if f.default is not None}
@@ -376,50 +365,54 @@ class Service:
     # -- settings ------------------------------------------------------------------------------
 
     async def _describe(self) -> Json:
-        fields: list[Json] = []
-        for f in self.config.fields:
-            described = describe_field(self.config.raw_fields[f.key])
-            if handler_of(f) == "timezone" and isinstance(f, SelectField) and f.options is None:
-                # "Leave options out to get the full list": the phone needs it for a picker.
-                try:
-                    zones = await self.system.timezone.available()
-                    options: list[Json] = [
-                        {"value": z, "label": z.replace("_", " ")} for z in zones
-                    ]
-                    described["options"] = options
-                except AdapterError as err:
-                    log.warning("couldn't list time zones: %s", err)
-            fields.append(described)
-        out: JsonObject = {"fields": fields, "permissions": self.config.permissions.to_json()}
+        raw = self.config.raw
+        out: JsonObject = {
+            "deviceSettings": raw.get("deviceSettings", {}),
+            "appSettings": describe_groups(raw.get("appSettings")),
+        }
         if self.config.model.deviceDescription:
-            out["description"] = self.config.model.deviceDescription
+            out["deviceDescription"] = self.config.model.deviceDescription
+        if "timezone" in self.config.system:
+            # The phone needs the Pi's list for its picker.
+            try:
+                zones: list[Json] = list(await self.system.timezone.available())
+                out["timezones"] = zones
+            except AdapterError as err:
+                log.warning("couldn't list time zones: %s", err)
         return out
 
+    def _known(self, key: str) -> bool:
+        return key in self.config.by_key or key in self.config.system
+
     async def _get(self, p: SettingsGetParams) -> Json:
-        keys = p.keys if p.keys is not None else [f.key for f in self.config.fields]
-        unknown = [k for k in keys if k not in self.config.by_key]
+        all_keys = [*self.config.system, *(f.key for f in self.config.fields)]
+        keys = p.keys if p.keys is not None else all_keys
+        unknown = [k for k in keys if not self._known(k)]
         if unknown:
             details: JsonObject = {k: "Unknown setting" for k in unknown}
             raise RpcError("invalid_params", "Unknown settings", details)
         values: JsonObject = {}
         for key in keys:
-            values[key] = await self._value_state(self.config.by_key[key])
+            f = self.config.by_key.get(key)
+            values[key] = (
+                self._store_state(f) if f is not None else await self._system_state(_system(key))
+            )
         return {"values": values}
 
-    async def _value_state(self, f: SettingField) -> JsonObject:
-        handler = handler_of(f)
-        if handler is None:
-            value, source = self._effective(f)
-            if is_secret(f):
-                return {"secret": True, "set": value is not None and value != "", "source": source}
-            return {"secret": False, "value": value, "source": source}
+    def _store_state(self, f: SettingField) -> JsonObject:
+        value, source = self._effective(f)
+        if is_secret(f):
+            return {"secret": True, "set": value is not None and value != "", "source": source}
+        return {"secret": False, "value": value, "source": source}
+
+    async def _system_state(self, setting: SystemSetting) -> JsonObject:
         try:
-            if handler == "wifi":
+            if setting == "wifi":
                 status = await self.system.wifi.status()
                 if status is None:
                     return {"secret": False, "value": None, "source": "none"}
                 return {"secret": False, "value": status.to_json(), "source": "system"}
-            if handler == "hostname":
+            if setting == "hostname":
                 return {
                     "secret": False,
                     "value": await self.system.hostname.get(),
@@ -427,34 +420,40 @@ class Service:
                 }
             return {"secret": False, "value": await self.system.timezone.get(), "source": "system"}
         except Exception as err:
-            log.warning("couldn't read %s from the system: %s", f.key, err)
+            log.warning("couldn't read %s from the system: %s", setting, err)
             return {"secret": False, "value": None, "source": "none"}
 
-    async def _check_set_value(self, f: SettingField, value: Json) -> str | None:
-        handler = handler_of(f)
+    async def _check_set_value(self, key: str, value: Json) -> str | None:
+        f = self.config.by_key.get(key)
+        if f is not None:
+            if value is None:
+                return "This setting can't be changed" if f.readOnly else None
+            return validate_value(f, value)
+        if key not in self.config.system:
+            return "Unknown setting"
         if value is None:
-            if handler is not None:
-                return "This setting can't be cleared"
-            return "This setting can't be changed" if f.readOnly else None
-        error = validate_value(f, value)
-        if error is not None:
-            return error
-        if handler == "hostname" and isinstance(value, str) and not HOSTNAME_RE.match(value):
-            return "Use letters, digits and hyphens (up to 63, not starting or ending with -)"
-        if handler == "timezone" and isinstance(f, SelectField) and f.options is None:
-            try:
-                if value not in await self.system.timezone.available():
-                    return "Unknown time zone"
-            except AdapterError as err:
-                return f"Couldn't check the time zone: {err}"
+            return "This setting can't be cleared"
+        setting = _system(key)
+        if setting == "wifi":
+            return wifi_value_error(value)
+        if not isinstance(value, str):
+            return "Must be text"
+        if setting == "hostname":
+            if not HOSTNAME_RE.match(value):
+                return "Use letters, digits and hyphens (up to 63, not starting or ending with -)"
+            return None
+        try:
+            if value not in await self.system.timezone.available():
+                return "Unknown time zone"
+        except AdapterError as err:
+            return f"Couldn't check the time zone: {err}"
         return None
 
     async def _set(self, conn: Connection, p: SettingsSetParams) -> Json:
         # 1. Validate everything; nothing is applied if anything is refused.
         errors: JsonObject = {}
         for key, value in p.values.items():
-            f = self.config.by_key.get(key)
-            problem = "Unknown setting" if f is None else await self._check_set_value(f, value)
+            problem = await self._check_set_value(key, value)
             if problem is not None:
                 errors[key] = problem
         if errors:
@@ -464,18 +463,17 @@ class Service:
 
         async with self._lock:
             results: dict[str, _Applied] = {}
-            fields = [self.config.by_key[k] for k in p.values]
 
-            # 2. System handlers, quickest first.
-            system_fields = sorted(
-                (f for f in fields if handler_of(f) is not None),
-                key=lambda f: _HANDLER_ORDER[handler_of(f) or "wifi"],
-            )
-            for f in system_fields:
-                results[f.key] = await self._apply_system(conn, f, p.values[f.key])
+            # 2. The Pi's own settings, quickest first.
+            system: list[SystemSetting] = [
+                _system(k) for k in p.values if k not in self.config.by_key
+            ]
+            system.sort(key=lambda setting: _SYSTEM_ORDER[setting])
+            for setting in system:
+                results[setting] = await self._apply_system(conn, setting, p.values[setting])
 
-            # 3. Store fields: one atomic write, then the env file.
-            store_fields = [f for f in fields if handler_of(f) is None]
+            # 3. App settings: one atomic write, then the env file.
+            store_fields = [self.config.by_key[k] for k in p.values if k in self.config.by_key]
             if store_fields:
                 results.update(self._apply_store(conn, store_fields, p.values))
 
@@ -489,18 +487,19 @@ class Service:
                 except Exception:
                     log.exception("announcing the changed settings failed")
 
-            # 5. Restart, then reload, each unit named by a changed field, once, after everything
-            # is written. A unit that is restarted isn't also reloaded.
+            # 5. Restart, then reload, each unit named by a changed item (or its group), once,
+            # after everything is written. A unit that is restarted isn't also reloaded.
             units: list[str] = []
             reload_units: list[str] = []
             for f in self.config.fields:
                 applied = results.get(f.key)
-                if applied is None or not applied.changed or f.onChange is None:
+                on_change = self.config.on_change[f.key]
+                if applied is None or not applied.changed or on_change is None:
                     continue
-                for item in f.onChange.restart or []:
+                for item in on_change.restart or []:
                     if item.root not in units:
                         units.append(item.root)
-                for item in f.onChange.reload or []:
+                for item in on_change.reload or []:
                     if item.root not in reload_units:
                         reload_units.append(item.root)
             reload_units = [u for u in reload_units if u not in units]
@@ -534,11 +533,11 @@ class Service:
         out: JsonObject = {key: results[key].to_json() for key in p.values}
         return {"results": out, "restarted": restarted, "reloaded": reloaded}
 
-    async def _apply_system(self, conn: Connection, f: SettingField, value: Json) -> _Applied:
-        handler = handler_of(f)
-
+    async def _apply_system(
+        self, conn: Connection, handler: SystemSetting, value: Json
+    ) -> _Applied:
         def event(kind: StatusKind, message: str) -> None:
-            conn.send(status_event(kind, message, key=f.key))
+            conn.send(status_event(kind, message, key=handler))
 
         try:
             if handler == "hostname" and isinstance(value, str):
@@ -574,7 +573,7 @@ class Service:
                 event("wifi.failed", str(err))
             return _Applied(ok=False, error=str(err))
         except Exception:
-            log.exception("applying %s failed", f.key)
+            log.exception("applying %s failed", handler)
             return _Applied(ok=False, error="Something went wrong on the device")
         return _Applied(ok=False, error="Unsupported value")
 
@@ -635,7 +634,7 @@ class Service:
     async def _reboot(self, conn: Connection) -> Json:
         if not self.config.permissions.allow_reboot:
             raise RpcError(
-                "forbidden", "Rebooting from the phone is turned off (permissions.allowReboot)"
+                "forbidden", "Rebooting from the phone is turned off (deviceSettings.allowReboot)"
             )
         if self._lock.locked():
             raise RpcError("busy", "Another change is still being applied")
@@ -653,7 +652,7 @@ class Service:
         if not self.config.permissions.allow_access_changes:
             raise RpcError(
                 "forbidden",
-                "Changing access from the phone is turned off (permissions.allowAccessChanges)",
+                "Changing access from the phone is turned off (deviceSettings.allowAccessChanges)",
             )
         if self._lock.locked():
             raise RpcError("busy", "Another change is still being applied")
@@ -729,6 +728,11 @@ class Service:
                 except Exception:
                     log.exception("re-advertising under the new name failed")
         return {}
+
+
+def _system(key: str) -> SystemSetting:
+    """A key already checked to be one of the Pi's own settings."""
+    return cast(SystemSetting, key)
 
 
 class _Missing:

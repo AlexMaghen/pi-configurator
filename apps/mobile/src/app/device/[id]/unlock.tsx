@@ -21,6 +21,7 @@ import type { UnlockStep } from "@/lib/link/DeviceLink";
 import { formatNumber } from "@/lib/format/numbers";
 import { errorMessage, isLinkError } from "@/lib/link/errors";
 import { useDevice, useSession, useStore } from "@/lib/session/AppProvider";
+import { deviceTabs } from "@/lib/form/tabs";
 import { useLayoutStyles } from "@/styles/layout";
 import { useTextStyles } from "@/styles/text";
 
@@ -51,9 +52,11 @@ export default function UnlockScreen() {
   const name = session.info?.name ?? device?.name ?? "Device";
   const isDemo = device?.demo ?? id.startsWith("demo-");
 
+  // The first tab the config shows (settings are loaded by the time a session is unlocked).
   const openSettings = useCallback(() => {
-    router.replace({ pathname: "/device/[id]/device-network", params: { id } });
-  }, [id]);
+    const [first] = deviceTabs(store.session(id));
+    router.replace({ pathname: `/device/[id]/${first ?? "device-network"}`, params: { id } });
+  }, [id, store]);
 
   const showError = useCallback((err: unknown) => {
     if (isLinkError(err, "rate_limited")) {

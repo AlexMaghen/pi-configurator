@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { Config, ConfigShape, checkConfig } from "../src/config";
@@ -22,13 +23,19 @@ describe("config cases", () => {
 });
 
 describe("example configs", () => {
-  it("BallsPi example is valid", () => {
-    const parsed = Config.safeParse(readJson(join(repoRoot, "config-template/config.json")));
-    expect(parsed.success, JSON.stringify(parsed.error?.issues)).toBe(true);
+  it("leaves both settings sections out when the file does", () => {
+    const parsed = Config.parse({ ...base });
+    expect(parsed.deviceSettings).toBeUndefined();
+    expect(parsed.appSettings).toBeUndefined();
   });
 
-  it("fills permission defaults", () => {
-    const parsed = Config.parse({ ...base });
-    expect(parsed.permissions).toEqual({ allowReboot: false, allowAccessChanges: false });
-  });
+  // config-device-files/ holds the owner's own device configs, when they're in this checkout.
+  const examples = ["config-template/config.json", "config-device-files/balls-config.json", "config-device-files/phonepi-config.json"];
+  it.each(examples.filter((path) => existsSync(join(repoRoot, path))))(
+    "%s is valid",
+    (path) => {
+      const parsed = Config.safeParse(readJson(join(repoRoot, path)));
+      expect(parsed.success, JSON.stringify(parsed.error?.issues)).toBe(true);
+    },
+  );
 });

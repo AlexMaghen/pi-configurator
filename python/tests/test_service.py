@@ -8,7 +8,7 @@ from pi_configurator import __version__
 from pi_configurator.protocol.gatt import SESSION_IDLE_TIMEOUT_S
 from pi_configurator.system.interfaces import WifiConnectResult
 
-from .conftest import PASSWORD, MakeWorld, World, base_config
+from .conftest import PASSWORD, MakeWorld, World, base_config, items_by_key
 
 
 async def test_full_flow(world: World) -> None:
@@ -27,21 +27,20 @@ async def test_full_flow(world: World) -> None:
     assert finish["_encrypted"] is False
 
     described = await phone.result("settings.describe")
-    fields = {f["key"]: f for f in described["fields"]}
-    assert described["permissions"] == {"allowReboot": False, "allowAccessChanges": False}
-    assert [f["key"] for f in described["fields"]][:3] == ["wifi", "hostname", "tz"]
-    assert "password" not in fields["wifi"]["default"]
-    assert fields["tz"]["options"][0] == {
-        "value": "America/Los_Angeles",
-        "label": "America/Los Angeles",
-    }
-    assert "default" not in fields["API_KEY"]
+    # The config's sections as written, plus the Pi's time zones.
+    assert described["deviceSettings"] == base_config()["deviceSettings"]
+    assert [g["groupName"] for g in described["appSettings"]] == ["App", "Other"]
+    assert described["appSettings"][0]["onChange"] == {"restart": ["app.service"]}
+    items = {i["key"]: i for g in described["appSettings"] for i in g["items"]}
+    assert "default" not in items["API_KEY"]
+    assert items["DISPENSE_MS"]["default"] == 800
+    assert described["timezones"][0] == "America/Los_Angeles"
 
     values = (await phone.result("settings.get"))["values"]
     assert values["DISPENSE_MS"] == {"secret": False, "value": 800, "source": "default"}
     assert values["API_KEY"] == {"secret": True, "set": False, "source": "none"}
     assert values["hostname"] == {"secret": False, "value": "raspberrypi", "source": "system"}
-    assert values["tz"] == {"secret": False, "value": "Etc/UTC", "source": "system"}
+    assert values["timezone"] == {"secret": False, "value": "Etc/UTC", "source": "system"}
     assert values["wifi"] == {"secret": False, "value": None, "source": "none"}
 
     phone.events.clear()
@@ -53,7 +52,7 @@ async def test_full_flow(world: World) -> None:
                 "STREAM_URL": "https://example.com/live",
                 "API_KEY": "s3cret value",
                 "hostname": "ballspi",
-                "tz": "America/New_York",
+                "timezone": "America/New_York",
                 "wifi": {"ssid": "Home", "password": "home-password"},
             }
         },
@@ -113,9 +112,8 @@ async def test_small_frames_carry_large_messages(world: World) -> None:
     world.timezone.zones = [f"Area/City_{i:03d}" for i in range(400)]
     phone = await world.unlocked_phone(frame_size=20)
     described = await phone.result("settings.describe")
-    tz = next(f for f in described["fields"] if f["key"] == "tz")
-    assert len(tz["options"]) == 400
-    assert phone.frames_in > 500
+    assert len(described["timezones"]) == 400
+    assert phone.frames_in > 400
 
 
 async def test_set_validates_everything_first(world: World) -> None:
@@ -131,7 +129,7 @@ async def test_set_validates_everything_first(world: World) -> None:
                 "hostname": None,
                 "SERIAL": "Y",
                 "ENABLED": False,  # fine on its own, but nothing may be saved
-                "tz": "Mars/Olympus",
+                "timezone": "Mars/Olympus",
             }
         },
     )
@@ -142,7 +140,7 @@ async def test_set_validates_everything_first(world: World) -> None:
         "nope",
         "hostname",
         "SERIAL",
-        "tz",
+        "timezone",
     }
     assert world.store_json["values"] == {}
     assert world.systemd.restarted == []
@@ -296,7 +294,7 @@ async def test_set_name(make_world: MakeWorld) -> None:
     assert json.loads(world.paths.config.read_text())["bluetooth"]["name"] == "KitchenPi"
     assert world.service.device_info().name == "KitchenPi"
     # The session survives a rename.
-    assert "fields" in await phone.result("settings.describe")
+    assert "appSettings" in await phone.result("settings.describe")
 
 
 async def test_unauthenticated_requests(world: World) -> None:
@@ -432,7 +430,7 @@ async def test_announce_failure_does_not_fail_the_save(world: World) -> None:
 
 async def test_reload_units(make_world: MakeWorld) -> None:
     config = base_config()
-    by_key = {f["key"]: f for f in config["settings"]}
+    by_key = items_by_key(config)
     by_key["ENABLED"]["onChange"] = {"reload": ["app.service", "viewer.service"]}
     by_key["SERIAL"]["readOnly"] = False
     by_key["SERIAL"]["onChange"] = {"reload": ["viewer.service", "broken.service"]}
@@ -464,8 +462,23 @@ async def test_reload_units(make_world: MakeWorld) -> None:
 async def test_describe_includes_device_description(make_world: MakeWorld) -> None:
     config = base_config()
     plain = await make_world(config).unlocked_phone()
-    assert "description" not in await plain.result("settings.describe")
+    assert "deviceDescription" not in await plain.result("settings.describe")
 
     config["deviceDescription"] = "Runs the ball track."
     phone = await make_world(config).unlocked_phone()
-    assert (await phone.result("settings.describe"))["description"] == "Runs the ball track."
+    assert (await phone.result("settings.describe"))["deviceDescription"] == "Runs the ball track."
+
+
+async def test_device_settings_turn_settings_off(make_world: MakeWorld) -> None:
+    config = base_config()
+    config["deviceSettings"] = {"wifi": True, "hostname": False}
+    world = make_world(config)
+    phone = await world.unlocked_phone()
+    described = await phone.result("settings.describe")
+    assert "timezones" not in described
+    values = (await phone.result("settings.get"))["values"]
+    assert "wifi" in values and "hostname" not in values and "timezone" not in values
+    error = await phone.error("settings.set", {"values": {"hostname": "x", "timezone": "UTC"}})
+    assert error["details"] == {"hostname": "Unknown setting", "timezone": "Unknown setting"}
+    assert await world.service.apply_first_start_defaults() == []
+    assert (await phone.error("system.reboot"))["code"] == "forbidden"

@@ -94,10 +94,11 @@ Listeners run on a background thread. In a program's own virtual environment, in
 `pi-configurator-client[dbus]` to hear the service's D-Bus signal and get changes at once;
 without the extra (or without a system bus) the client polls `values.json` every second.
 
-Programs that don't want any code for this have two config options per field:
+Programs that don't want any code for this have two config options, on an `appSettings` group
+(for all its items) or on one item:
 
 - `"onChange": {"restart": ["app.service"]}` restarts the unit after a save that changes the
-  field.
+  setting.
 - `"onChange": {"reload": ["app.service"]}` runs `systemctl reload`, which is the unit's
   `ExecReload=`. Usually that is `ExecReload=/bin/kill -HUP $MAINPID`, and the program re-reads
   its settings on SIGHUP. A unit under both is only restarted.

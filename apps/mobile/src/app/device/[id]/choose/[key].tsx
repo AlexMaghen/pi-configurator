@@ -39,11 +39,11 @@ export default function ChooseScreen() {
   const draft = session.drafts[key];
   const saved = currentValue(session.values?.[key]);
   const selected = draft?.kind === "value" ? draft.value : saved;
-  const fromPhone = field?.type === "select" && !field.options;
+  const fromPhone = field?.type === "select" && field.options.length === 0;
 
   const all: Choice[] = useMemo(() => {
     if (field?.type !== "select") return [];
-    if (field.options) return field.options;
+    if (field.options.length > 0) return field.options;
     return timezoneChoices().map((z) => ({ value: z, label: z.replace(/_/g, " ") }));
   }, [field]);
 

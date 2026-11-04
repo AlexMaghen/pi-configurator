@@ -4,12 +4,13 @@
  * The app uses `validateValue` to show errors before sending; the Pi runs its own Python copy and
  * is the authority. Both are tested against `test-vectors/value-cases.json`.
  */
-import type { Field } from "./config";
+import type { SettingGroup, SettingItem } from "./config";
 import { WifiValue } from "./config";
+import type { FormField } from "./device";
 
 /** The reason a value was refused, or `undefined` when it's fine. Messages are shown to users. */
-export function validateValue(field: Field, value: unknown): string | undefined {
-  if (field.readOnly) return "This setting can't be changed";
+export function validateValue(field: FormField, value: unknown): string | undefined {
+  if ("readOnly" in field && field.readOnly) return "This setting can't be changed";
   switch (field.type) {
     case "string": {
       if (typeof value !== "string") return "Must be text";
@@ -44,8 +45,8 @@ export function validateValue(field: Field, value: unknown): string | undefined 
       return typeof value === "boolean" ? undefined : "Must be on or off";
     case "select": {
       if (typeof value !== "string") return "Must be one of the choices";
-      // Timezone fields without options are checked against the system's list on the Pi.
-      if (field.options && !field.options.some((o) => o.value === value)) return "Must be one of the choices";
+      // The time zone field may come without options; the Pi checks it against its own list.
+      if (field.options.length > 0 && !field.options.some((o) => o.value === value)) return "Must be one of the choices";
       return undefined;
     }
     case "wifi": {
@@ -55,18 +56,18 @@ export function validateValue(field: Field, value: unknown): string | undefined 
   }
 }
 
-/** A field as sent by `settings.describe`: secret defaults and Wi-Fi default passwords removed. */
-export function describeField(field: Field): Field {
-  if (field.type === "string" && field.secret && field.default !== undefined) {
-    const { default: _hidden, ...rest } = field;
+/** An item as sent by `settings.describe`: a secret item's default is removed. */
+export function describeItem(item: SettingItem): SettingItem {
+  if (item.type === "string" && item.secret && item.default !== undefined) {
+    const { default: _hidden, ...rest } = item;
     return rest;
   }
-  if (field.type === "wifi" && field.default?.password !== undefined) {
-    const { password: _hidden, ...wifi } = field.default;
-    return { ...field, default: wifi };
-  }
-  return field;
+  return item;
 }
 
+/** The config's `appSettings` as sent by `settings.describe`. */
+export const describeGroups = (groups: SettingGroup[] | undefined): SettingGroup[] =>
+  (groups ?? []).map((g) => ({ ...g, items: g.items.map(describeItem) }));
+
 /** Whether a field's value is hidden from the phone. */
-export const isSecret = (field: Field): boolean => field.type === "string" && field.secret === true;
+export const isSecret = (field: FormField): boolean => field.type === "string" && field.secret === true;

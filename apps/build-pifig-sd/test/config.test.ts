@@ -10,7 +10,8 @@ describe("device config", () => {
     const config = JSON.parse(personalize(template, "Garage Pi", "x"));
     expect(config.bluetooth.name).toBe("Garage Pi");
     expect(config.access.password).toBe("x");
-    expect(config.settings).toEqual(JSON.parse(template).settings);
+    expect(config.appSettings).toEqual(JSON.parse(template).appSettings);
+    expect(config.deviceSettings).toEqual(JSON.parse(template).deviceSettings);
   });
 
   it("accepts any password from 1 to 128 characters", () => {
@@ -35,7 +36,7 @@ describe("--config-file", () => {
     expect(checkConfigText(template, "my.json")).toEqual({
       name: JSON.parse(template).bluetooth.name,
       password: JSON.parse(template).access.password,
-      settingsCount: JSON.parse(template).settings.length,
+      settingsCount: 9,
     });
   });
 

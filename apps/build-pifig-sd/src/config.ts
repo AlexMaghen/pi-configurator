@@ -58,6 +58,6 @@ export function checkConfigText(text: string, source: string): ConfigSummary {
   return {
     name: result.data.bluetooth.name,
     password: result.data.access.password,
-    settingsCount: result.data.settings.length,
+    settingsCount: (result.data.appSettings ?? []).reduce((n, g) => n + g.items.length, 0),
   };
 }

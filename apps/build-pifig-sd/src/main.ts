@@ -147,7 +147,7 @@ async function main(argv: string[]): Promise<number> {
   const custom = configPath ? start : undefined;
   const { summary } = start;
   console.log(
-    `Config: ${configPath ?? "built-in template"} (checked: ${summary.settingsCount.toLocaleString("en-US")} settings, Bluetooth name "${summary.name}")\n`,
+    `Config: ${configPath ?? "built-in template"} (checked: ${summary.settingsCount.toLocaleString("en-US")} app settings, Bluetooth name "${summary.name}")\n`,
   );
   const drive = await chooseDrive(drivePath);
   console.log(`\nThis Raspberry Pi boot drive will be set up:\n${describe(drive)}\n`);

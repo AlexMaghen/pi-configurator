@@ -1,41 +1,50 @@
 /**
- * The body of both device pages: the device's settings from `settings.describe`, grouped by
- * `group` in first-seen order, under the Device & Network / Application Settings control.
- * `tab` picks the fields: the OS settings (Wi-Fi, hostname, time zone) or the config's own.
+ * The body of both device pages, under the Device & Network / Application Settings control.
+ * Device & Network shows the Pi's own settings that `deviceSettings` turns on (Wi-Fi, hostname,
+ * time zone, in that order); Application Settings shows the `appSettings` groups, each under its
+ * name and help, in the config's order. A tab with nothing on it is hidden (see lib/form/tabs).
  *
  * Edits stay as drafts in the store (so the choose and Wi-Fi screens, and the other tab, can add
  * to them) until Save, which sends every changed field with `settings.set`, whichever tab it's
  * on. While saving, the Pi's status events show live; afterwards each refused field shows the
- * Pi's message. `children` render below the settings (the device sections on Device & Network).
+ * Pi's message. The device sections (DeviceSections) render below the settings on whichever tab
+ * holds them.
  */
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Text, View } from "react-native";
 import { Stack, router } from "expo-router";
 import { Banner } from "@/components/Banner";
 import { Button, HeaderButton } from "@/components/Button";
-import { DeviceTabs, type DeviceTab } from "@/components/DeviceTabs";
+import { DeviceSections } from "@/components/DeviceSections";
+import { DeviceTabs } from "@/components/DeviceTabs";
 import { FieldControl } from "@/components/FieldControl";
 import { ProgressNote } from "@/components/ProgressNote";
 import { Screen } from "@/components/Screen";
 import { Section } from "@/components/Section";
 import { StatusFeed } from "@/components/StatusFeed";
-import { groupFields, isSystemField, pendingChanges } from "@/lib/form/model";
+import { isSystemField, pendingChanges } from "@/lib/form/model";
+import { deviceTabs, type DeviceTab } from "@/lib/form/tabs";
 import { formatNumber } from "@/lib/format/numbers";
 import { errorMessage } from "@/lib/link/errors";
 import { useDevice, useSession, useStore } from "@/lib/session/AppProvider";
 import type { SaveOutcome } from "@/lib/session/AppStore";
+import type { FormField } from "@pi-configurator/protocol";
 import { useFormStyles } from "@/styles/form";
 import { useLayoutStyles } from "@/styles/layout";
 
 export interface SettingsFormProps {
   id: string;
   tab: DeviceTab;
-  /** Shown when this tab has no settings (null hides the note). */
-  emptyText: string | null;
-  children?: ReactNode;
 }
 
-export function SettingsForm({ id, tab, emptyText, children }: SettingsFormProps) {
+/** One heading and its fields. Device & Network has one fixed "Network" heading. */
+interface FormGroup {
+  title?: string;
+  help?: string;
+  fields: FormField[];
+}
+
+export function SettingsForm({ id, tab }: SettingsFormProps) {
   const store = useStore();
   const session = useSession(id);
   const device = useDevice(id);
@@ -45,18 +54,28 @@ export function SettingsForm({ id, tab, emptyText, children }: SettingsFormProps
   const [failure, setFailure] = useState<string>();
   const [saveStartedAt, setSaveStartedAt] = useState<number>();
 
-  const { fields, values = {}, drafts, saveErrors, busy, info, description } = session;
+  const { fields, values = {}, drafts, saveErrors, busy, info, description, deviceSettings, appSettings } = session;
 
   // Normally loaded by unlock; load here when arriving another way.
   useEffect(() => {
     if (session.phase === "unlocked" && !fields) store.load(id).catch((err) => setFailure(errorMessage(err)));
   }, [fields, id, session.phase, store]);
 
-  const shown = useMemo(
-    () => (fields ?? []).filter((f) => isSystemField(f) === (tab === "device-network")),
-    [fields, tab],
-  );
-  const groups = useMemo(() => groupFields(shown), [shown]);
+  const tabs = useMemo(() => deviceTabs({ deviceSettings, appSettings }), [deviceSettings, appSettings]);
+  // A config can hide this tab (e.g. a link to Device & Network on a device with none): go to one it shows.
+  useEffect(() => {
+    if (fields && !tabs.includes(tab)) router.replace({ pathname: `/device/[id]/${tabs[0]!}`, params: { id } });
+  }, [fields, id, tab, tabs]);
+  const groups = useMemo((): FormGroup[] => {
+    if (!fields) return [];
+    if (tab === "device-network") {
+      const own = fields.filter(isSystemField);
+      return own.length > 0 ? [{ title: "Network", fields: own }] : [];
+    }
+    return (appSettings ?? []).map((g) => ({ title: g.groupName, help: g.help, fields: g.items }));
+  }, [appSettings, fields, tab]);
+  // On Device & Network, or on Application Settings when Device & Network is hidden.
+  const showsDeviceSections = tab === (tabs.includes("device-network") ? "device-network" : "app-settings");
   // Counts changes on both tabs: Save sends them all.
   const pending = useMemo(() => pendingChanges(fields ?? [], values, drafts), [fields, values, drafts]);
   const hasErrors = Object.keys(pending.errors).length > 0;
@@ -114,7 +133,7 @@ export function SettingsForm({ id, tab, emptyText, children }: SettingsFormProps
         }
       >
         {description ? <Text style={f.deviceDescription}>{description}</Text> : null}
-        <DeviceTabs id={id} current={tab} />
+        {fields ? <DeviceTabs id={id} current={tab} tabs={tabs} /> : null}
 
         {!fields ? <ProgressNote text="Loading settings" /> : null}
 
@@ -140,7 +159,7 @@ export function SettingsForm({ id, tab, emptyText, children }: SettingsFormProps
         ) : null}
 
         {groups.map((group) => (
-          <Section key={group.title ?? "_ungrouped"} title={group.title}>
+          <Section key={group.title ?? "_ungrouped"} title={group.title} description={group.help}>
             {group.fields.map((field) => (
               <FieldControl
                 key={field.key}
@@ -158,9 +177,11 @@ export function SettingsForm({ id, tab, emptyText, children }: SettingsFormProps
           </Section>
         ))}
 
-        {fields && shown.length === 0 && emptyText ? <Text style={l.sectionFooter}>{emptyText}</Text> : null}
+        {fields && groups.length === 0 ? (
+          <Text style={l.sectionFooter}>{"This device's config file turns on no settings."}</Text>
+        ) : null}
 
-        {children}
+        {fields && showsDeviceSections ? <DeviceSections id={id} /> : null}
       </Screen>
     </>
   );

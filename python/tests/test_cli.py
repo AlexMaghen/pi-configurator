@@ -10,8 +10,8 @@ from typing import Any, Literal, cast
 import pytest
 from pi_configurator.cli import main
 from pi_configurator.protocol.config import parse_config
-from pi_configurator.protocol.jsonutil import JsonObject
-from pi_configurator.pydantic_fields import fields_from_model
+from pi_configurator.protocol.jsonutil import Json, JsonObject
+from pi_configurator.pydantic_fields import group_from_model
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -22,7 +22,7 @@ PYTHON_ROOT = Path(__file__).resolve().parents[1]
 
 def test_check_example(capsys: pytest.CaptureFixture[str]) -> None:
     assert main(["check", str(CONFIG_TEMPLATE)]) == 0
-    assert "OK (12 settings" in capsys.readouterr().out
+    assert "OK (9 app settings in 3 groups, 3 device settings" in capsys.readouterr().out
 
 
 def test_check_reports_codes(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -30,16 +30,14 @@ def test_check_reports_codes(tmp_path: Path, capsys: pytest.CaptureFixture[str])
         "version": 1,
         "bluetooth": {"name": "X"},
         "access": {"password": "p"},
-        "settings": [
+        "appSettings": [
             {
-                "key": "a",
-                "label": "A",
-                "type": "integer",
-                "min": 5,
-                "max": 1,
-                "target": {"store": True},
-            },
-            {"key": "a", "label": "A", "type": "string", "target": {"store": True}},
+                "groupName": "G",
+                "items": [
+                    {"key": "a", "label": "A", "type": "integer", "min": 5, "max": 1},
+                    {"key": "a", "label": "A", "type": "string"},
+                ],
+            }
         ],
     }
     path = tmp_path / "config.json"
@@ -47,7 +45,7 @@ def test_check_reports_codes(tmp_path: Path, capsys: pytest.CaptureFixture[str])
     assert main(["check", str(path)]) == 2
     err = capsys.readouterr().err
     assert "[min_above_max]" in err and "[duplicate_key]" in err
-    assert "settings.1.key" in err
+    assert "appSettings.0.items.1.key" in err
 
     path.write_text("{")
     assert main(["check", str(path)]) == 2
@@ -69,9 +67,11 @@ class DemoSettings(BaseSettings):
 
 
 def test_fields_from_pydantic() -> None:
-    entries, skipped = fields_from_model(DemoSettings, group="Balls", restart=["balls.service"])
+    group, skipped = group_from_model(DemoSettings, group="Balls", restart=["balls.service"])
     assert skipped == ["tags"]
-    objs = [cast(dict[str, Any], e) for e in entries]
+    assert group["groupName"] == "Balls"
+    assert group["onChange"] == {"restart": ["balls.service"]}
+    objs = [cast(dict[str, Any], e) for e in cast(list[Json], group["items"])]
     by_key = {e["key"]: e for e in objs}
     assert list(by_key) == [
         "BALLS_NAME",
@@ -91,22 +91,20 @@ def test_fields_from_pydantic() -> None:
         "min": 1024,
         "max": 65535,
         "default": 51826,
-        "target": {"store": True},
-        "group": "Balls",
-        "onChange": {"restart": ["balls.service"]},
     }
     assert by_key["BALLS_API_KEY"]["secret"] is True
     assert by_key["BALLS_MODE"]["options"][1] == {"value": "manual", "label": "Manual"}
     assert "default" not in by_key["BALLS_PINCODE"]
-    reloads, _ = fields_from_model(DemoSettings, reload=["balls.service"])
-    assert cast(dict[str, Any], reloads[0])["onChange"] == {"reload": ["balls.service"]}
+    reloads, _ = group_from_model(DemoSettings, reload=["balls.service"])
+    assert reloads["groupName"] == "DemoSettings"
+    assert reloads["onChange"] == {"reload": ["balls.service"]}
     # The output is a valid config, env export included.
     config: JsonObject = {
         "version": 1,
         "bluetooth": {"name": "X"},
         "access": {"password": "p"},
         "export": {"envFile": "/tmp/x.env"},
-        "settings": entries,
+        "appSettings": [group],
     }
     parse_config(config)
 
@@ -114,7 +112,7 @@ def test_fields_from_pydantic() -> None:
 def test_fields_from_pydantic_command(capsys: pytest.CaptureFixture[str]) -> None:
     assert main(["fields-from-pydantic", "tests.test_cli:DemoSettings"]) == 0
     out = capsys.readouterr()
-    assert json.loads(out.out)[0]["key"] == "BALLS_NAME"
+    assert json.loads(out.out)["items"][0]["key"] == "BALLS_NAME"
     assert "skipped tags" in out.err
 
 
@@ -144,7 +142,7 @@ def test_set_access_name_and_password(
     data = json.loads(path.read_text())
     assert data["bluetooth"]["name"] == "Kitchen Pi"
     assert data["access"]["password"] == "a-new-password"
-    assert len(data["settings"]) == 12  # the rest of the file is kept
+    assert len(data["appSettings"]) == 3  # the rest of the file is kept
     assert "saved" in capsys.readouterr().out
 
 

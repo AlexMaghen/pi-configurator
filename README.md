@@ -142,10 +142,11 @@ Each Pi has one config file, `/etc/pi-configurator/config.json`, owned by root a
 by root. It decides:
 - the name the Pi advertises over Bluetooth;
 - the password that unlocks it;
-- what the phone may do;
-- the list of settings the phone shows.
+- which of the Pi's own settings and actions the phone offers (`deviceSettings`, the
+  **Device & Network** tab);
+- the device's own settings, in named groups (`appSettings`, the **Application Settings** tab).
 
-The app has no settings of its own for a device: it draws its form from this list.
+The app has no settings of its own for a device: it draws both tabs from this file.
 [config-template/config.json](config-template/config.json) is a complete example (it's also what
 the demo device uses). Check a file with `pi-configurator check FILE`, which lists every problem
 with its location.
@@ -158,33 +159,56 @@ with its location.
 | `bluetooth.name` | yes | The name the phone sees when scanning, at most 29 bytes (29 plain letters, fewer with accents or emoji) |
 | `access.password` | yes | The pifig Access Password, 1 to 128 characters. It never travels over Bluetooth: the app proves it knows it (SRP). The service warns in its log if it's under 8 characters or still the template's `1234` |
 | `deviceDescription` | no | A few sentences, up to 1,000 characters, shown under the device name at the top of the device screen |
-| `permissions.allowReboot` | no | `true` shows a Reboot button in the app. Default `false` |
-| `permissions.allowAccessChanges` | no | `true` lets the app change the access password and the Bluetooth name. Default `false` |
-| `export.envFile` | no | An absolute path. After each save, the service writes every stored setting into this file as `KEY=value` lines, inside a marked block, and leaves other lines alone. systemd units can read it with `EnvironmentFile=`. Keys must then be valid variable names (letters, digits, `_`) |
-| `settings` | yes | The list of settings the phone shows, in order (below) |
+| `export.envFile` | no | An absolute path. After each save, the service writes every app setting into this file as `KEY=value` lines, inside a marked block, and leaves other lines alone. systemd units can read it with `EnvironmentFile=`. Keys must then be valid variable names (letters, digits, `_`) |
+| `deviceSettings` | no | Device & Network (below). Left out, everything on it is off |
+| `appSettings` | no | Application Settings: a list of groups (below). Left out or empty, the tab is hidden |
 | `$schema` | no | For editors only. `packages/protocol/json-schema/config.schema.json` gives autocompletion and checking as you type |
 
-### Settings
+### deviceSettings: Device & Network
 
-Each entry in `settings` is one field in the app's form. The app puts fields that change the
-Pi's own system (Wi-Fi, hostname, time zone) under **Device & Network**, and all others under
-**Application Settings**. Within a tab, fields are grouped under their `group` headings, in the
-order the groups first appear.
+The Pi's own settings, and what the phone may do to the device. Each is off unless the file
+turns it on. The settings always appear in this order, under a "Network" heading, with fixed
+labels and help:
 
-Properties every field can have:
+| Property | Value | What it does |
+|---|---|---|
+| `wifi` | `true`, or `{ "label": "..." }` | The Wi-Fi screen: the networks the Pi sees, joining, hidden networks. Changes the Pi's connection through NetworkManager. The password is never sent back to the phone |
+| `hostname` | `true`, or `{ "label": "...", "default": "..." }` | The Pi's hostname (its `name.local` address), keeping `/etc/hosts` in step. Letters, digits and hyphens, up to 63 |
+| `timezone` | `true`, or `{ "label": "...", "default": "..." }` | The Pi's time zone, picked from every zone the Pi knows |
+| `allowReboot` | `true` / `false` | A Reboot button |
+| `allowAccessChanges` | `true` / `false` | Change password and Rename device: the access password and the Bluetooth name |
+
+- `true` turns a setting on as it is. The object form also turns it on, and can replace the
+  label (e.g. "Robot name" instead of "Hostname") or give a first-start `default` (below).
+- `false`, or leaving it out, turns it off: it isn't shown, and the Pi refuses it.
+- When all five are off, the app hides the Device & Network tab. The device's own section
+  (Device Data, Activity, Disconnect) then moves to the bottom of Application Settings.
+- `wifi`, `hostname` and `timezone` are reserved: no app setting may use them as its `key`.
+
+### appSettings: Application Settings
+
+A list of groups, shown in the file's order. Each group is a heading with its settings under it:
 
 | Property | Required | Meaning |
 |---|---|---|
-| `key` | yes | A unique ID: letters, digits, `_`, `.` or `-`, starting with a letter or `_`, up to 64 characters. For stored settings it's also the name other programs read it by |
+| `groupName` | yes | The heading. Each group needs its own name |
+| `help` | no | A line of explanation under the heading |
+| `onChange.restart` | no | systemd units to restart after a save that changes any setting in the group, e.g. `["myapp.service"]` |
+| `onChange.reload` | no | systemd units to reload (`systemctl reload`, usually a SIGHUP) instead. A unit listed under both is only restarted |
+| `items` | yes | The group's settings, in order: at least one |
+
+Each item is one field in the form, and one value your programs read. Properties every item can
+have:
+
+| Property | Required | Meaning |
+|---|---|---|
+| `key` | yes | A unique ID across all groups: letters, digits, `_`, `.` or `-`, starting with a letter or `_`, up to 64 characters. It's the name other programs read the value by |
 | `label` | yes | The field's name in the form |
-| `type` | yes | `string`, `integer`, `number`, `boolean`, `select` or `wifi` (below) |
-| `target` | yes | Where the value goes: `{ "store": true }` saves it for your programs; `{ "system": "wifi" }`, `"hostname"` or `"timezone"` changes the Pi itself |
+| `type` | yes | `string`, `integer`, `number`, `boolean` or `select` (below) |
 | `default` | no | The value until someone changes it (below) |
-| `group` | no | Section heading in the form |
 | `help` | no | A line of explanation under the field |
 | `readOnly` | no | `true` shows the value but doesn't allow changing it (e.g. a serial number) |
-| `onChange.restart` | no | systemd units to restart after a save that changes this field, e.g. `["myapp.service"]` |
-| `onChange.reload` | no | systemd units to reload (`systemctl reload`, usually a SIGHUP) instead. A unit listed under both is only restarted |
+| `onChange` | no | The same as the group's `onChange`, for this item only. It replaces the group's: an item with its own `onChange` doesn't also use the group's |
 
 Properties by type:
 
@@ -194,25 +218,17 @@ Properties by type:
 | `integer` | whole number | `min`, `max`, `step`, `unit` (a label such as `ms` or `%` shown beside the box) | The number pad, or a keyboard with a minus sign if `min` is below 0 |
 | `number` | decimal number | the same as `integer` | The decimal pad, or a keyboard with a minus sign if `min` is below 0 |
 | `boolean` | `true` / `false` | none | A switch |
-| `select` | one of a list | `options`: `[{ "value": "...", "label": "..." }]` | A drop-down menu for up to 10 options; a searchable page for longer lists |
-| `wifi` | `{ "ssid", "password", "hidden" }` | none | The Wi-Fi screen: the networks the Pi sees, joining, hidden networks |
-
-The system targets need a matching type, and each can be used once:
-
-| `target.system` | Field type | What it changes |
-|---|---|---|
-| `wifi` | `wifi` | The Pi's Wi-Fi connection, through NetworkManager. The password is always secret |
-| `hostname` | `string` | The Pi's hostname (its `name.local` address), keeping `/etc/hosts` in step |
-| `timezone` | `select` | The Pi's time zone. Leave out `options` to offer every time zone the Pi knows |
+| `select` | one of a list | `options` (required): `[{ "value": "...", "label": "..." }]` | A drop-down menu for up to 10 options; a searchable page for longer lists |
 
 ### Defaults
 
-- **Stored settings** (`"store": true`): until the phone saves a value, programs read the
-  `default`. Changing a default in the file affects every setting the phone hasn't changed.
-  "Reset to default" in the app removes the saved value.
-- **System settings:** a `default` is applied once, on the service's first start, and only if
-  the Pi has nothing set yet (for example no Wi-Fi network). After that the Pi's own value is
-  shown.
+- **App settings:** until the phone saves a value, programs read the `default`. Changing a
+  default in the file affects every setting the phone hasn't changed. "Reset to default" in the
+  app removes the saved value.
+- **Hostname and time zone** (`deviceSettings`): a `default` is applied once, on the service's
+  first start, and only if the Pi is still on its factory value (hostname `raspberrypi`, time
+  zone UTC). After that the Pi's own value is shown. Raspberry Pi Imager and `build-pifig-sd`
+  usually set both already, so these defaults matter mostly for cards written another way.
 
 A default must be valid for its field: within `min`/`max` and on a `step`, matching `pattern`
 and the length limits, or one of the `options`.
@@ -227,50 +243,51 @@ A Pi running one program, `garage.service`, with its Wi-Fi and two settings of i
   "bluetooth": { "name": "Garage Pi" },
   "access": { "password": "choose-a-long-password" },
   "deviceDescription": "Opens the garage door and reports whether it's open.",
-  "permissions": { "allowReboot": true, "allowAccessChanges": false },
-  "settings": [
+  "deviceSettings": {
+    "wifi": true,
+    "allowReboot": true
+  },
+  "appSettings": [
     {
-      "key": "wifi",
-      "label": "Wi-Fi network",
-      "type": "wifi",
-      "target": { "system": "wifi" }
-    },
-    {
-      "key": "DOOR_OPEN_SECONDS",
-      "label": "Door open time",
-      "help": "How long the motor runs to open the door.",
-      "group": "Door",
-      "type": "number",
-      "min": 1,
-      "max": 30,
-      "step": 0.5,
-      "unit": "s",
-      "default": 12,
-      "target": { "store": true },
-      "onChange": { "restart": ["garage.service"] }
-    },
-    {
-      "key": "LOG_LEVEL",
-      "label": "Log level",
-      "group": "Advanced",
-      "type": "select",
-      "options": [
-        { "value": "info", "label": "Info" },
-        { "value": "debug", "label": "Debug" }
-      ],
-      "default": "info",
-      "target": { "store": true },
-      "onChange": { "reload": ["garage.service"] }
+      "groupName": "Door",
+      "help": "Changes restart the door program.",
+      "onChange": { "restart": ["garage.service"] },
+      "items": [
+        {
+          "key": "DOOR_OPEN_SECONDS",
+          "label": "Door open time",
+          "help": "How long the motor runs to open the door.",
+          "type": "number",
+          "min": 1,
+          "max": 30,
+          "step": 0.5,
+          "unit": "s",
+          "default": 12
+        },
+        {
+          "key": "LOG_LEVEL",
+          "label": "Log level",
+          "type": "select",
+          "options": [
+            { "value": "info", "label": "Info" },
+            { "value": "debug", "label": "Debug" }
+          ],
+          "default": "info",
+          "onChange": { "reload": ["garage.service"] }
+        }
+      ]
     }
   ]
 }
 ```
 
-The phone shows Wi-Fi under Device & Network, and "Door open time" and "Log level" under
-Application Settings. `garage.service` reads `DOOR_OPEN_SECONDS` and `LOG_LEVEL` through
-`pi-configurator-client`, and can also get them through `export.envFile`. It's restarted when
-the door time changes, and reloaded when the log level changes. How programs read settings and
-hear about changes: [deploy/README.md](deploy/README.md#reading-settings-from-another-program).
+The phone shows Wi-Fi and Reboot under Device & Network (no hostname or time zone: they're off),
+and a "Door" group with "Door open time" and "Log level" under Application Settings.
+`garage.service` reads `DOOR_OPEN_SECONDS` and `LOG_LEVEL` through `pi-configurator-client`,
+and can also get them through `export.envFile`. It's restarted when the door time changes (the
+group's `onChange`), and only reloaded when the log level changes (the item's own). How
+programs read settings and hear about changes:
+[deploy/README.md](deploy/README.md#reading-settings-from-another-program).
 
 ## Documentation
 

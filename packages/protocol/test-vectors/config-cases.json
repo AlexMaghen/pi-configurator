@@ -1,76 +1,780 @@
 {
-  "description": "Config files and the expected outcome. 'shape' cases fail the JSON shape (any error is fine); 'rules' cases pass the shape but break checkConfig rules and must report exactly these codes. 'base' is merged under each case's 'config' (settings replace, not merge).",
+  "description": "Config files and the expected outcome. 'shape' cases fail the JSON shape (any error is fine); 'rules' cases pass the shape but break checkConfig rules and must report exactly these codes. 'base' is merged under each case's 'config' (top-level keys replace, not merge).",
   "base": {
     "version": 1,
-    "bluetooth": { "name": "TestPi" },
-    "access": { "password": "secret-password" },
-    "settings": []
+    "bluetooth": {
+      "name": "TestPi"
+    },
+    "access": {
+      "password": "secret-password"
+    }
   },
   "cases": [
-    { "name": "minimal", "outcome": "valid", "config": {} },
+    {
+      "name": "minimal",
+      "outcome": "valid",
+      "config": {}
+    },
     {
       "name": "every field type",
       "outcome": "valid",
       "config": {
-        "export": { "envFile": "/tmp/app.env" },
-        "permissions": { "allowReboot": true },
-        "settings": [
-          { "key": "wifi", "label": "Wi-Fi", "type": "wifi", "target": { "system": "wifi" }, "default": { "ssid": "Home", "password": "12345678" } },
-          { "key": "NAME", "label": "Name", "type": "string", "default": "pi", "minLength": 1, "maxLength": 10, "pattern": "^[a-z]+$", "target": { "store": true } },
-          { "key": "SECRET", "label": "Secret", "type": "string", "secret": true, "default": "s3cret", "target": { "store": true } },
-          { "key": "COUNT", "label": "Count", "type": "integer", "min": 0, "max": 10, "step": 2, "default": 4, "target": { "store": true } },
-          { "key": "RATIO", "label": "Ratio", "type": "number", "min": 0, "max": 1, "default": 0.5, "target": { "store": true } },
-          { "key": "ON", "label": "On", "type": "boolean", "default": true, "target": { "store": true } },
-          { "key": "MODE", "label": "Mode", "type": "select", "options": [{ "value": "a", "label": "A" }, { "value": "b", "label": "B" }], "default": "b", "target": { "store": true } },
-          { "key": "tz", "label": "Time zone", "type": "select", "target": { "system": "timezone" } },
-          { "key": "host", "label": "Host", "type": "string", "target": { "system": "hostname" }, "onChange": { "restart": ["app.service", "other@1.service"] } }
+        "export": {
+          "envFile": "/tmp/app.env"
+        },
+        "deviceSettings": {
+          "wifi": true,
+          "hostname": {
+            "label": "Box name",
+            "default": "pi-box"
+          },
+          "timezone": {
+            "default": "Europe/Paris"
+          },
+          "allowReboot": true,
+          "allowAccessChanges": false
+        },
+        "appSettings": [
+          {
+            "groupName": "Main",
+            "help": "Names and secrets",
+            "onChange": {
+              "restart": [
+                "app.service",
+                "other@1.service"
+              ]
+            },
+            "items": [
+              {
+                "key": "NAME",
+                "label": "Name",
+                "type": "string",
+                "default": "pi",
+                "minLength": 1,
+                "maxLength": 10,
+                "pattern": "^[a-z]+$"
+              },
+              {
+                "key": "SECRET",
+                "label": "Secret",
+                "type": "string",
+                "secret": true,
+                "default": "s3cret"
+              },
+              {
+                "key": "COUNT",
+                "label": "Count",
+                "type": "integer",
+                "min": 0,
+                "max": 10,
+                "step": 2,
+                "default": 4
+              }
+            ]
+          },
+          {
+            "groupName": "Numbers",
+            "items": [
+              {
+                "key": "RATIO",
+                "label": "Ratio",
+                "type": "number",
+                "min": 0,
+                "max": 1,
+                "default": 0.5,
+                "onChange": {
+                  "restart": [
+                    "app.service"
+                  ]
+                }
+              },
+              {
+                "key": "ON",
+                "label": "On",
+                "type": "boolean",
+                "default": true
+              },
+              {
+                "key": "MODE",
+                "label": "Mode",
+                "type": "select",
+                "options": [
+                  {
+                    "value": "a",
+                    "label": "A"
+                  },
+                  {
+                    "value": "b",
+                    "label": "B"
+                  }
+                ],
+                "default": "b"
+              }
+            ],
+            "onChange": {
+              "reload": [
+                "app.service"
+              ]
+            }
+          }
         ]
       }
     },
-    { "name": "missing version", "outcome": "shape", "config": { "version": null } },
-    { "name": "wrong version", "outcome": "shape", "config": { "version": 2 } },
-    { "name": "unknown top-level key", "outcome": "shape", "config": { "extra": true } },
-    { "name": "empty password", "outcome": "shape", "config": { "access": { "password": "" } } },
-    { "name": "bluetooth name too long", "outcome": "shape", "config": { "bluetooth": { "name": "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234" } } },
-    { "name": "relative env file", "outcome": "shape", "config": { "export": { "envFile": "app.env" } } },
-    { "name": "unknown field type", "outcome": "shape", "config": { "settings": [{ "key": "a", "label": "A", "type": "color", "target": { "store": true } }] } },
-    { "name": "bad key", "outcome": "shape", "config": { "settings": [{ "key": "1abc", "label": "A", "type": "string", "target": { "store": true } }] } },
-    { "name": "unknown handler", "outcome": "shape", "config": { "settings": [{ "key": "a", "label": "A", "type": "string", "target": { "system": "ssh" } }] } },
-    { "name": "store false", "outcome": "shape", "config": { "settings": [{ "key": "a", "label": "A", "type": "string", "target": { "store": false } }] } },
-    { "name": "bad unit name", "outcome": "shape", "config": { "settings": [{ "key": "a", "label": "A", "type": "string", "target": { "store": true }, "onChange": { "restart": ["rm -rf"] } }] } },
-    { "name": "integer default not whole", "outcome": "shape", "config": { "settings": [{ "key": "a", "label": "A", "type": "integer", "default": 1.5, "target": { "store": true } }] } },
-    { "name": "short wifi password default", "outcome": "shape", "config": { "settings": [{ "key": "w", "label": "W", "type": "wifi", "target": { "system": "wifi" }, "default": { "ssid": "x", "password": "short" } }] } },
+    {
+      "name": "missing version",
+      "outcome": "shape",
+      "config": {
+        "version": null
+      }
+    },
+    {
+      "name": "wrong version",
+      "outcome": "shape",
+      "config": {
+        "version": 2
+      }
+    },
+    {
+      "name": "unknown top-level key",
+      "outcome": "shape",
+      "config": {
+        "extra": true
+      }
+    },
+    {
+      "name": "empty password",
+      "outcome": "shape",
+      "config": {
+        "access": {
+          "password": ""
+        }
+      }
+    },
+    {
+      "name": "bluetooth name too long",
+      "outcome": "shape",
+      "config": {
+        "bluetooth": {
+          "name": "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234"
+        }
+      }
+    },
+    {
+      "name": "relative env file",
+      "outcome": "shape",
+      "config": {
+        "export": {
+          "envFile": "app.env"
+        }
+      }
+    },
+    {
+      "name": "unknown field type",
+      "outcome": "shape",
+      "config": {
+        "appSettings": [
+          {
+            "groupName": "Main",
+            "items": [
+              {
+                "key": "a",
+                "label": "A",
+                "type": "color"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "bad key",
+      "outcome": "shape",
+      "config": {
+        "appSettings": [
+          {
+            "groupName": "Main",
+            "items": [
+              {
+                "key": "1abc",
+                "label": "A",
+                "type": "string"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "unknown device setting",
+      "outcome": "shape",
+      "config": {
+        "deviceSettings": {
+          "bluetooth": true
+        }
+      }
+    },
+    {
+      "name": "item with target",
+      "outcome": "shape",
+      "config": {
+        "appSettings": [
+          {
+            "groupName": "Main",
+            "items": [
+              {
+                "key": "a",
+                "label": "A",
+                "type": "string",
+                "target": {
+                  "store": true
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "bad unit name",
+      "outcome": "shape",
+      "config": {
+        "appSettings": [
+          {
+            "groupName": "Main",
+            "items": [
+              {
+                "key": "a",
+                "label": "A",
+                "type": "string",
+                "onChange": {
+                  "restart": [
+                    "rm -rf"
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "integer default not whole",
+      "outcome": "shape",
+      "config": {
+        "appSettings": [
+          {
+            "groupName": "Main",
+            "items": [
+              {
+                "key": "a",
+                "label": "A",
+                "type": "integer",
+                "default": 1.5
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "hostname default not a hostname",
+      "outcome": "shape",
+      "config": {
+        "deviceSettings": {
+          "hostname": {
+            "default": "-bad-"
+          }
+        }
+      }
+    },
     {
       "name": "duplicate key",
       "outcome": "rules",
-      "codes": ["duplicate_key"],
-      "config": { "settings": [
-        { "key": "a", "label": "A", "type": "string", "target": { "store": true } },
-        { "key": "a", "label": "A2", "type": "string", "target": { "store": true } }
-      ] }
+      "codes": [
+        "duplicate_key"
+      ],
+      "config": {
+        "appSettings": [
+          {
+            "groupName": "Main",
+            "items": [
+              {
+                "key": "a",
+                "label": "A",
+                "type": "string"
+              },
+              {
+                "key": "a",
+                "label": "A2",
+                "type": "string"
+              }
+            ]
+          }
+        ]
+      }
     },
-    { "name": "hostname handler on integer", "outcome": "rules", "codes": ["handler_type_mismatch"], "config": { "settings": [{ "key": "h", "label": "H", "type": "integer", "target": { "system": "hostname" } }] } },
     {
-      "name": "handler used twice",
+      "name": "reserved key",
       "outcome": "rules",
-      "codes": ["duplicate_handler"],
-      "config": { "settings": [
-        { "key": "h1", "label": "H", "type": "string", "target": { "system": "hostname" } },
-        { "key": "h2", "label": "H", "type": "string", "target": { "system": "hostname" } }
-      ] }
+      "codes": [
+        "reserved_key"
+      ],
+      "config": {
+        "appSettings": [
+          {
+            "groupName": "Main",
+            "items": [
+              {
+                "key": "hostname",
+                "label": "Host",
+                "type": "string"
+              }
+            ]
+          }
+        ]
+      }
     },
-    { "name": "wifi in store", "outcome": "rules", "codes": ["wifi_needs_handler"], "config": { "settings": [{ "key": "w", "label": "W", "type": "wifi", "target": { "store": true } }] } },
-    { "name": "min above max", "outcome": "rules", "codes": ["min_above_max"], "config": { "settings": [{ "key": "n", "label": "N", "type": "number", "min": 5, "max": 1, "target": { "store": true } }] } },
-    { "name": "default out of range", "outcome": "rules", "codes": ["default_out_of_range"], "config": { "settings": [{ "key": "n", "label": "N", "type": "integer", "min": 0, "max": 10, "default": 11, "target": { "store": true } }] } },
-    { "name": "default off step", "outcome": "rules", "codes": ["default_not_on_step"], "config": { "settings": [{ "key": "n", "label": "N", "type": "integer", "min": 0, "step": 5, "default": 7, "target": { "store": true } }] } },
-    { "name": "default fails pattern", "outcome": "rules", "codes": ["default_pattern_mismatch"], "config": { "settings": [{ "key": "s", "label": "S", "type": "string", "pattern": "^[0-9]+$", "default": "abc", "target": { "store": true } }] } },
-    { "name": "default too long", "outcome": "rules", "codes": ["default_length"], "config": { "settings": [{ "key": "s", "label": "S", "type": "string", "maxLength": 2, "default": "abc", "target": { "store": true } }] } },
-    { "name": "minLength above maxLength", "outcome": "rules", "codes": ["length_min_above_max"], "config": { "settings": [{ "key": "s", "label": "S", "type": "string", "minLength": 5, "maxLength": 2, "target": { "store": true } }] } },
-    { "name": "bad pattern", "outcome": "rules", "codes": ["bad_pattern"], "config": { "settings": [{ "key": "s", "label": "S", "type": "string", "pattern": "([a-z", "target": { "store": true } }] } },
-    { "name": "select without options", "outcome": "rules", "codes": ["options_required"], "config": { "settings": [{ "key": "m", "label": "M", "type": "select", "target": { "store": true } }] } },
-    { "name": "duplicate option", "outcome": "rules", "codes": ["duplicate_option"], "config": { "settings": [{ "key": "m", "label": "M", "type": "select", "options": [{ "value": "a", "label": "A" }, { "value": "a", "label": "A again" }], "target": { "store": true } }] } },
-    { "name": "default not an option", "outcome": "rules", "codes": ["default_not_an_option"], "config": { "settings": [{ "key": "m", "label": "M", "type": "select", "options": [{ "value": "a", "label": "A" }], "default": "z", "target": { "store": true } }] } },
-    { "name": "env export with dotted key", "outcome": "rules", "codes": ["env_key_invalid"], "config": { "export": { "envFile": "/tmp/x.env" }, "settings": [{ "key": "app.name", "label": "N", "type": "string", "target": { "store": true } }] } },
-    { "name": "dotted key without env export", "outcome": "valid", "config": { "settings": [{ "key": "app.name", "label": "N", "type": "string", "target": { "store": true } }] } }
+    {
+      "name": "group name used twice",
+      "outcome": "rules",
+      "codes": [
+        "duplicate_group"
+      ],
+      "config": {
+        "appSettings": [
+          {
+            "groupName": "Main",
+            "items": [
+              {
+                "key": "A",
+                "label": "A",
+                "type": "boolean"
+              }
+            ]
+          },
+          {
+            "groupName": "Main",
+            "items": [
+              {
+                "key": "B",
+                "label": "B",
+                "type": "boolean"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "wifi item",
+      "outcome": "shape",
+      "config": {
+        "appSettings": [
+          {
+            "groupName": "Main",
+            "items": [
+              {
+                "key": "net",
+                "label": "Net",
+                "type": "wifi"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "min above max",
+      "outcome": "rules",
+      "codes": [
+        "min_above_max"
+      ],
+      "config": {
+        "appSettings": [
+          {
+            "groupName": "Main",
+            "items": [
+              {
+                "key": "n",
+                "label": "N",
+                "type": "number",
+                "min": 5,
+                "max": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "default out of range",
+      "outcome": "rules",
+      "codes": [
+        "default_out_of_range"
+      ],
+      "config": {
+        "appSettings": [
+          {
+            "groupName": "Main",
+            "items": [
+              {
+                "key": "n",
+                "label": "N",
+                "type": "integer",
+                "min": 0,
+                "max": 10,
+                "default": 11
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "default off step",
+      "outcome": "rules",
+      "codes": [
+        "default_not_on_step"
+      ],
+      "config": {
+        "appSettings": [
+          {
+            "groupName": "Main",
+            "items": [
+              {
+                "key": "n",
+                "label": "N",
+                "type": "integer",
+                "min": 0,
+                "step": 5,
+                "default": 7
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "default fails pattern",
+      "outcome": "rules",
+      "codes": [
+        "default_pattern_mismatch"
+      ],
+      "config": {
+        "appSettings": [
+          {
+            "groupName": "Main",
+            "items": [
+              {
+                "key": "s",
+                "label": "S",
+                "type": "string",
+                "pattern": "^[0-9]+$",
+                "default": "abc"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "default too long",
+      "outcome": "rules",
+      "codes": [
+        "default_length"
+      ],
+      "config": {
+        "appSettings": [
+          {
+            "groupName": "Main",
+            "items": [
+              {
+                "key": "s",
+                "label": "S",
+                "type": "string",
+                "maxLength": 2,
+                "default": "abc"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "minLength above maxLength",
+      "outcome": "rules",
+      "codes": [
+        "length_min_above_max"
+      ],
+      "config": {
+        "appSettings": [
+          {
+            "groupName": "Main",
+            "items": [
+              {
+                "key": "s",
+                "label": "S",
+                "type": "string",
+                "minLength": 5,
+                "maxLength": 2
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "bad pattern",
+      "outcome": "rules",
+      "codes": [
+        "bad_pattern"
+      ],
+      "config": {
+        "appSettings": [
+          {
+            "groupName": "Main",
+            "items": [
+              {
+                "key": "s",
+                "label": "S",
+                "type": "string",
+                "pattern": "([a-z"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "select without options",
+      "outcome": "shape",
+      "config": {
+        "appSettings": [
+          {
+            "groupName": "Main",
+            "items": [
+              {
+                "key": "m",
+                "label": "M",
+                "type": "select"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "duplicate option",
+      "outcome": "rules",
+      "codes": [
+        "duplicate_option"
+      ],
+      "config": {
+        "appSettings": [
+          {
+            "groupName": "Main",
+            "items": [
+              {
+                "key": "m",
+                "label": "M",
+                "type": "select",
+                "options": [
+                  {
+                    "value": "a",
+                    "label": "A"
+                  },
+                  {
+                    "value": "a",
+                    "label": "A again"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "default not an option",
+      "outcome": "rules",
+      "codes": [
+        "default_not_an_option"
+      ],
+      "config": {
+        "appSettings": [
+          {
+            "groupName": "Main",
+            "items": [
+              {
+                "key": "m",
+                "label": "M",
+                "type": "select",
+                "options": [
+                  {
+                    "value": "a",
+                    "label": "A"
+                  }
+                ],
+                "default": "z"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "env export with dotted key",
+      "outcome": "rules",
+      "codes": [
+        "env_key_invalid"
+      ],
+      "config": {
+        "export": {
+          "envFile": "/tmp/x.env"
+        },
+        "appSettings": [
+          {
+            "groupName": "Main",
+            "items": [
+              {
+                "key": "app.name",
+                "label": "N",
+                "type": "string"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "dotted key without env export",
+      "outcome": "valid",
+      "config": {
+        "appSettings": [
+          {
+            "groupName": "Main",
+            "items": [
+              {
+                "key": "app.name",
+                "label": "N",
+                "type": "string"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "duplicate key across groups",
+      "outcome": "rules",
+      "codes": [
+        "duplicate_key"
+      ],
+      "config": {
+        "appSettings": [
+          {
+            "groupName": "Main",
+            "items": [
+              {
+                "key": "A",
+                "label": "A",
+                "type": "boolean"
+              }
+            ]
+          },
+          {
+            "groupName": "Other",
+            "items": [
+              {
+                "key": "A",
+                "label": "A again",
+                "type": "boolean"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "empty group",
+      "outcome": "shape",
+      "config": {
+        "appSettings": [
+          {
+            "groupName": "Main",
+            "items": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "group without name",
+      "outcome": "shape",
+      "config": {
+        "appSettings": [
+          {
+            "items": [
+              {
+                "key": "A",
+                "label": "A",
+                "type": "boolean"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "bad unit name in group onChange",
+      "outcome": "shape",
+      "config": {
+        "appSettings": [
+          {
+            "groupName": "Main",
+            "onChange": {
+              "restart": [
+                "not a unit"
+              ]
+            },
+            "items": [
+              {
+                "key": "A",
+                "label": "A",
+                "type": "boolean"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "old permissions section",
+      "outcome": "shape",
+      "config": {
+        "permissions": {
+          "allowReboot": true
+        }
+      }
+    },
+    {
+      "name": "old settings list",
+      "outcome": "shape",
+      "config": {
+        "settings": []
+      }
+    },
+    {
+      "name": "device settings all off",
+      "outcome": "valid",
+      "config": {
+        "deviceSettings": {
+          "wifi": false,
+          "hostname": false,
+          "timezone": false,
+          "allowReboot": false
+        },
+        "appSettings": []
+      }
+    }
   ]
 }
