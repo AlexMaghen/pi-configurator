@@ -224,7 +224,8 @@ Properties by type:
 
 - **App settings:** until the phone saves a value, programs read the `default`. Changing a
   default in the file affects every setting the phone hasn't changed. "Reset to default" in the
-  app removes the saved value.
+  app removes one saved value; "Reset All to Defaults" (above Reboot) removes every saved app
+  setting after a confirmation. Neither touches Wi-Fi, hostname or time zone.
 - **Hostname and time zone** (`deviceSettings`): a `default` is applied once, on the service's
   first start, and only if the Pi is still on its factory value (hostname `raspberrypi`, time
   zone UTC). After that the Pi's own value is shown. Raspberry Pi Imager and `build-pifig-sd`

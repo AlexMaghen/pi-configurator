@@ -22,7 +22,7 @@ import {
 } from "@pi-configurator/protocol";
 import { DeviceLink, type UnlockStep } from "../link/DeviceLink";
 import { LinkError, errorMessage, isLinkError } from "../link/errors";
-import { pendingChanges, type Draft, type Drafts } from "../form/model";
+import { isStoreField, pendingChanges, type Draft, type Drafts } from "../form/model";
 import type { DeviceTransport, DiscoveredDevice, RadioState } from "../transport/types";
 
 export interface PasswordVault {
@@ -374,6 +374,25 @@ export class AppStore {
     } finally {
       this.patchSession(id, { busy: undefined });
     }
+  }
+
+  /**
+   * Puts every saved, writable app setting back to its default (a null value per key) and drops
+   * unsaved app drafts. Settings already on their default aren't sent, so nothing restarts for
+   * them; the Pi's own settings (Wi-Fi, hostname, time zone) have no default and are left alone.
+   */
+  async resetAll(id: string): Promise<SaveOutcome> {
+    const s = this.session(id);
+    const keys = (s.fields ?? [])
+      .filter((f) => isStoreField(f) && !(f.type !== "wifi" && f.readOnly === true))
+      .map((f) => f.key);
+    this.patchSession(id, (cur) => {
+      const drafts = { ...cur.drafts };
+      for (const key of keys) delete drafts[key];
+      return { drafts };
+    });
+    const saved = keys.filter((key) => s.values?.[key]?.source === "saved");
+    return this.apply(id, Object.fromEntries(saved.map((key) => [key, null])));
   }
 
   /** After `access.setName`: the device re-advertises under the new name. */

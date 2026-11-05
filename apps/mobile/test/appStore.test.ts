@@ -77,6 +77,27 @@ describe("AppStore", () => {
     expect(outcome.failed[key]).toMatch(/can't be reset/);
   });
 
+  it("resets every saved app setting and leaves the Pi's own settings", async () => {
+    const { store } = setup();
+    await store.unlock("d1", DEMO_PASSWORD);
+    const url = pick.url();
+    await store.apply("d1", { [num.key]: next, [url.key]: "http://example.com/stream" });
+    store.setDraft("d1", num.key, { kind: "text", text: String(num.default) });
+    const outcome = await store.resetAll("d1");
+    expect(outcome.saved.sort()).toEqual([num.key, url.key].sort());
+    const s = store.session("d1");
+    expect(s.values?.[num.key]).toMatchObject({ value: num.default, source: "default" });
+    expect(s.values?.[url.key]).toMatchObject({ source: "default" });
+    expect(s.values?.[pick.hostname().key]?.source).toBe("system");
+    expect(s.drafts).toEqual({});
+  });
+
+  it("sends nothing to reset when every app setting is on its default", async () => {
+    const { store } = setup();
+    await store.unlock("d1", DEMO_PASSWORD);
+    expect(await store.resetAll("d1")).toEqual({ saved: [], failed: {}, restarted: [], reloaded: [] });
+  });
+
   it("returns to locked when the Pi ends an idle session", async () => {
     const { store, clock } = setup();
     await store.unlock("d1", DEMO_PASSWORD);

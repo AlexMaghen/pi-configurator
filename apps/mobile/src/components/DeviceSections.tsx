@@ -3,6 +3,7 @@
  * Settings when the config hides Device & Network): what the device reported about itself, and
  * the actions its config allows. Reboot needs `deviceSettings.allowReboot`; Change password and
  * Rename need `deviceSettings.allowAccessChanges`. Hidden controls are refused by the Pi anyway.
+ * Reset All to Defaults shows whenever the device has app settings.
  */
 import { useEffect, useState } from "react";
 import { Alert } from "react-native";
@@ -11,6 +12,7 @@ import { Badge } from "@/components/Badge";
 import { Banner } from "@/components/Banner";
 import { ListRow } from "@/components/ListRow";
 import { Section } from "@/components/Section";
+import { hasAppTab } from "@pi-configurator/protocol";
 import { errorMessage } from "@/lib/link/errors";
 import { useDevice, useSession, useStore } from "@/lib/session/AppProvider";
 import { useTheme } from "@/theme";
@@ -23,12 +25,16 @@ export function DeviceSections({ id }: { id: string }) {
   const [hasSaved, setHasSaved] = useState(false);
   const [error, setError] = useState<string>();
   const [rebooting, setRebooting] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  // Shown next to the button: iOS drops an alert opened from another alert's button.
+  const [resetNotice, setResetNotice] = useState<{ tone: "success" | "error"; text: string }>();
 
   useEffect(() => {
     void store.hasSavedPassword(id).then(setHasSaved);
   }, [id, store]);
 
-  const { info, deviceSettings: permissions } = session;
+  const { info, deviceSettings: permissions, appSettings } = session;
+  const canResetAll = hasAppTab(appSettings);
   const name = info?.name ?? device?.name ?? "Device";
   const go = (
     pathname: "/device/[id]/details" | "/device/[id]/activity" | "/device/[id]/password" | "/device/[id]/rename",
@@ -53,6 +59,41 @@ export function DeviceSections({ id }: { id: string }) {
         },
       },
     ]);
+
+  const resetAll = () =>
+    Alert.alert(
+      "Reset all settings to defaults?",
+      `Every Application Setting on ${name} goes back to its default, and unsaved changes are discarded. Wi-Fi, hostname and time zone stay as they are. This can't be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Reset All",
+          style: "destructive",
+          onPress: async () => {
+            setResetting(true);
+            setResetNotice(undefined);
+            try {
+              const outcome = await store.resetAll(id);
+              const failed = Object.entries(outcome.failed);
+              if (failed.length > 0)
+                setResetNotice({ tone: "error", text: failed.map(([key, message]) => `${key}: ${message}`).join("\n") });
+              else
+                setResetNotice({
+                  tone: "success",
+                  text:
+                    outcome.saved.length > 0
+                      ? "Every Application Setting is back to its default."
+                      : "Every Application Setting was already on its default.",
+                });
+            } catch (err) {
+              setResetNotice({ tone: "error", text: errorMessage(err) });
+            } finally {
+              setResetting(false);
+            }
+          },
+        },
+      ],
+    );
 
   const disconnect = async () => {
     router.dismissAll();
@@ -85,9 +126,22 @@ export function DeviceSections({ id }: { id: string }) {
         </Section>
       ) : null}
 
-      {permissions?.allowReboot ? (
+      {resetNotice ? <Banner tone={resetNotice.tone}>{resetNotice.text}</Banner> : null}
+      {canResetAll || permissions?.allowReboot ? (
         <Section>
-          <ListRow title={rebooting ? "Rebooting" : "Reboot"} icon="power" danger disabled={rebooting} onPress={reboot} chevron={false} />
+          {canResetAll ? (
+            <ListRow
+              title={resetting ? "Resetting" : "Reset All to Defaults"}
+              icon="refresh"
+              danger
+              disabled={resetting}
+              onPress={resetAll}
+              chevron={false}
+            />
+          ) : null}
+          {permissions?.allowReboot ? (
+            <ListRow title={rebooting ? "Rebooting" : "Reboot"} icon="power" danger disabled={rebooting} onPress={reboot} chevron={false} />
+          ) : null}
         </Section>
       ) : null}
 
