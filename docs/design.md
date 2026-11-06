@@ -146,7 +146,7 @@ Device & Network shows them in this order:
 
 | Setting | What it does |
 |---|---|
-| `wifi` | Scan, join, forget, through NetworkManager (D-Bus). Value is `{ ssid, password, hidden }`; the password is always secret |
+| `wifi` | Scan, join, forget, through NetworkManager (D-Bus). Value is `{ ssid, password, hidden }`; the password is always secret. Before a scan or join the service switches the Wi-Fi radio on if it's off: Raspberry Pi OS keeps it rfkill-blocked until a Wi-Fi country is set, which Raspberry Pi Imager only does when given a network |
 | `hostname` | Sets the hostname (`hostnamectl`), keeps `/etc/hosts` in step |
 | `timezone` | `timedatectl set-timezone`, from every zone the Pi knows |
 
@@ -274,7 +274,10 @@ the monorepo make sure both sides agree.
   - **Devices**: nearby pi-configurator devices from scan + `info`.
   - **Unlock**: password entry. Once it works, it's saved per device in the iOS Keychain /
     Android Keystore and used automatically next time; "Forget password" removes it. A saved
-    password that stops working is dropped and the app asks again.
+    password that stops working is dropped and the app asks again. "Per device" means the
+    phone's id for the Bluetooth chip plus the device's name: the id alone follows the board,
+    so a Pi set up again under a new name would otherwise reuse its old password. Renaming
+    from the app moves the saved password to the new name.
   - **Settings**: Device & Network and Application Settings, built from `settings.describe`;
     a tab with nothing on it is hidden. Save sends only changed fields.
   - **Wi-Fi**: scan list from the Pi, join, current connection.

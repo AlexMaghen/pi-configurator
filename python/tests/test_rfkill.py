@@ -1,8 +1,13 @@
-"""Clearing Bluetooth's rfkill soft block through a fake /sys/class/rfkill."""
+"""Clearing rfkill soft blocks (Bluetooth, Wi-Fi) through a fake /sys/class/rfkill."""
 
 from pathlib import Path
 
-from pi_configurator.ble.rfkill import bluetooth_blocks, unblock_bluetooth
+from pi_configurator.system.rfkill import (
+    bluetooth_blocks,
+    unblock_bluetooth,
+    unblock_wifi,
+    wifi_blocks,
+)
 
 
 def _radio(root: Path, entry: str, kind: str, name: str, soft: str, hard: str = "0") -> Path:
@@ -37,3 +42,13 @@ def test_reports_hard_block(tmp_path: Path) -> None:
 def test_no_rfkill_directory(tmp_path: Path) -> None:
     assert bluetooth_blocks(tmp_path / "missing") == []
     assert unblock_bluetooth(tmp_path / "missing") == []
+
+
+def test_unblocks_only_soft_blocked_wifi(tmp_path: Path) -> None:
+    bt = _radio(tmp_path, "rfkill0", "bluetooth", "hci0", soft="1")
+    wifi = _radio(tmp_path, "rfkill1", "wlan", "phy0", soft="1")
+
+    assert [b.name for b in wifi_blocks(tmp_path) if b.soft] == ["phy0"]
+    assert unblock_wifi(tmp_path) == ["phy0"]
+    assert (wifi / "soft").read_text().strip() == "0"
+    assert (bt / "soft").read_text().strip() == "1"  # Bluetooth is left alone

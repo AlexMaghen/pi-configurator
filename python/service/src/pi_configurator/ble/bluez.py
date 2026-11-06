@@ -25,7 +25,7 @@ from dbus_fast.service import ServiceInterface, dbus_method, dbus_property
 
 from ..core.service import Service
 from ..protocol.gatt import INFO_UUID, RPC_IN_UUID, RPC_OUT_UUID, SERVICE_UUID
-from . import rfkill
+from ..system import rfkill
 from .bridge import BleBridge, ChannelBusy
 
 log = logging.getLogger(__name__)

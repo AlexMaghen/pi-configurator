@@ -38,7 +38,7 @@ export default function RenameScreen() {
     setError(undefined);
     try {
       await store.call(id, "access.setName", { name: trimmed });
-      store.renamed(id, trimmed);
+      await store.renamed(id, trimmed);
       router.back();
     } catch (err) {
       setError(errorMessage(err));

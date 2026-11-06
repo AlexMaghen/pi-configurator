@@ -14,9 +14,11 @@ checking on hardware are marked "VERIFY ON PI".
 import asyncio
 import logging
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any, Final
 
 from ..protocol.rpc import WifiSecurity
+from . import rfkill
 from .interfaces import AdapterError, WifiConnectResult, WifiNetwork, WifiStatus
 
 log = logging.getLogger(__name__)
@@ -35,6 +37,7 @@ I_SETTINGS: Final = "org.freedesktop.NetworkManager.Settings"
 I_CONNECTION: Final = "org.freedesktop.NetworkManager.Settings.Connection"
 
 DEVICE_TYPE_WIFI: Final = 2  # NM_DEVICE_TYPE_WIFI
+DEVICE_STATE_UNAVAILABLE: Final = 20  # NM_DEVICE_STATE_*: no radio (rfkill) or no firmware
 ACTIVE_ACTIVATING: Final = 1  # NM_ACTIVE_CONNECTION_STATE_*
 ACTIVE_ACTIVATED: Final = 2
 ACTIVE_DEACTIVATED: Final = 4
@@ -119,10 +122,14 @@ class NetworkManagerWifi:
         connect_timeout_s: float = 45,
         scan_wait_s: float = 6,
         clock: Callable[[], float] | None = None,
+        radio_wait_s: float = 8,
+        rfkill_root: Path = rfkill.RFKILL,
     ) -> None:
         self._interface = interface
         self._connect_timeout = connect_timeout_s
         self._scan_wait = scan_wait_s
+        self._radio_wait = radio_wait_s
+        self._rfkill_root = rfkill_root
         self._bus: Any = None
         self._loop_clock = clock
 
@@ -227,8 +234,45 @@ class NetworkManagerWifi:
                 return str(address.value)
         return None
 
+    async def _radio_on(self, device: str) -> None:
+        """Makes sure the Wi-Fi radio is on before a scan or join (see rfkill.py for why it can
+        be off on a fresh card). Clears an rfkill soft block, turns on NetworkManager's own
+        Wi-Fi switch, and waits for the device to become available. Raises AdapterError with
+        the reason when it stays unavailable."""
+        if int(await self._prop(device, I_DEVICE, "State")) > DEVICE_STATE_UNAVAILABLE:
+            return
+        unblocked = rfkill.unblock_wifi(self._rfkill_root)
+        if unblocked:
+            log.warning(
+                "Wi-Fi was switched off (rfkill); turned it back on: %s", ", ".join(unblocked)
+            )
+        if not await self._prop(NM_PATH, I_NM, "WirelessEnabled"):
+            from dbus_fast import Variant
+
+            log.warning("NetworkManager had Wi-Fi turned off; turning it on")
+            await self._call(
+                NM_PATH, I_PROPS, "Set", "ssv", [I_NM, "WirelessEnabled", Variant("b", True)]
+            )
+        deadline = self._now() + self._radio_wait
+        while int(await self._prop(device, I_DEVICE, "State")) <= DEVICE_STATE_UNAVAILABLE:
+            if self._now() >= deadline:
+                radios = rfkill.wifi_blocks(self._rfkill_root)
+                if any(r.hard for r in radios):
+                    raise AdapterError(
+                        "The Wi-Fi radio is switched off in hardware (rfkill hard block)"
+                    )
+                if any(r.soft for r in radios):
+                    raise AdapterError(
+                        "The Wi-Fi radio is still switched off (see `rfkill list wifi`)"
+                    )
+                raise AdapterError(
+                    "The Wi-Fi device isn't available (see `nmcli device` on the Pi)"
+                )
+            await asyncio.sleep(0.5)
+
     async def scan(self) -> list[WifiNetwork]:
         device = await self._device()
+        await self._radio_on(device)
         before = await self._last_scan(device)
         try:
             await self._call(device, I_WIRELESS, "RequestScan", "a{sv}", [{}])
@@ -284,6 +328,7 @@ class NetworkManagerWifi:
         from dbus_fast import Variant
 
         device = await self._device()
+        await self._radio_on(device)
         existing: str | None = None
         existing_settings: dict[str, dict[str, Any]] = {}
         for path, settings in await self._saved_wifi():

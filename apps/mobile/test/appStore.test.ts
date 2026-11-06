@@ -1,7 +1,7 @@
 /** AppStore: saved-password unlock, save flow and session loss, against the demo device. */
 import { describe, expect, it } from "vitest";
 import { AppStore, type AppTransport, type PasswordVault } from "../src/lib/session/AppStore";
-import type { DeviceTransport } from "../src/lib/transport/types";
+import type { DeviceTransport, DiscoveredDevice } from "../src/lib/transport/types";
 import { DEMO_PASSWORD, makePi, pick, restartsOf, randomBytes, testFields } from "./support";
 
 const num = pick.number();
@@ -9,8 +9,9 @@ const next = num.default! + num.step!;
 
 function setup() {
   const { pi, clock } = makePi();
+  let advertise: (device: DiscoveredDevice) => void = () => undefined;
   const transport: AppTransport = {
-    scan: () => () => undefined,
+    scan: (onDevice) => ((advertise = onDevice), () => undefined),
     watchRadio: (l) => (l("on"), () => undefined),
     owns: () => true,
     connect: async () => pi.connect(),
@@ -22,7 +23,13 @@ function setup() {
     set: async (id, pw) => void saved.set(id, pw),
     forget: async (id) => void saved.delete(id),
   };
-  return { store: new AppStore(transport, vault, randomBytes), saved, pi, clock };
+  const store = new AppStore(transport, vault, randomBytes);
+  /** The device "d1" advertising under `name` (as a re-flashed board would). */
+  const seenAs = (name: string) => {
+    store.startScanning();
+    advertise({ id: "d1", name, demo: false, lastSeen: Date.now() });
+  };
+  return { store, saved, pi, clock, seenAs };
 }
 
 describe("AppStore", () => {
@@ -30,7 +37,7 @@ describe("AppStore", () => {
     const { store, saved } = setup();
     expect(await store.unlockWithSaved("d1")).toBe("none");
     await store.unlock("d1", DEMO_PASSWORD, { remember: true });
-    expect(saved.get("d1")).toBe(DEMO_PASSWORD);
+    expect([...saved.values()]).toEqual([DEMO_PASSWORD]);
     expect(store.session("d1").phase).toBe("unlocked");
     expect(store.session("d1").fields?.length).toBe(testFields().length);
 
@@ -107,5 +114,31 @@ describe("AppStore", () => {
     expect(await store.unlockWithSaved("d1")).toBe("none");
     await store.unlock("d1", DEMO_PASSWORD);
     expect(store.session("d1").phase).toBe("unlocked");
+  });
+
+  it("doesn't reuse a password saved under the board's earlier name", async () => {
+    const { store, seenAs } = setup();
+    seenAs("crapula");
+    await store.unlock("d1", DEMO_PASSWORD, { remember: true });
+    await store.disconnect("d1");
+    expect(await store.hasSavedPassword("d1")).toBe(true);
+
+    seenAs("SomeThing"); // same Bluetooth chip, so same id, set up again under a new name
+    expect(await store.hasSavedPassword("d1")).toBe(false);
+    expect(await store.unlockWithSaved("d1")).toBe("none");
+
+    seenAs("crapula");
+    expect(await store.hasSavedPassword("d1")).toBe(true);
+  });
+
+  it("keeps the saved password when the device is renamed from the app", async () => {
+    const { store, saved, seenAs } = setup();
+    seenAs("BallsPi");
+    await store.unlock("d1", DEMO_PASSWORD, { remember: true });
+    await store.renamed("d1", "Garage");
+    expect(saved.size).toBe(1);
+    expect(await store.hasSavedPassword("d1")).toBe(true);
+    await store.disconnect("d1");
+    expect(await store.unlockWithSaved("d1")).toBe("unlocked");
   });
 });

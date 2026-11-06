@@ -8,6 +8,7 @@
  */
 import {
   appItems,
+  bytesToHex,
   deviceFields,
   type DeviceInfo,
   type DeviceSettings,
@@ -19,16 +20,22 @@ import {
   type SettingValue,
   type StatusEvent,
   type ValueState,
+  utf8,
 } from "@pi-configurator/protocol";
 import { DeviceLink, type UnlockStep } from "../link/DeviceLink";
 import { LinkError, errorMessage, isLinkError } from "../link/errors";
 import { isStoreField, pendingChanges, type Draft, type Drafts } from "../form/model";
 import type { DeviceTransport, DiscoveredDevice, RadioState } from "../transport/types";
 
+/**
+ * Saved device passwords. Keys come from `AppStore.vaultKey`: the phone's id for the device's
+ * Bluetooth chip plus the device's name, so a board set up again under a new name never reuses
+ * the password saved for its old name.
+ */
 export interface PasswordVault {
-  get(deviceId: string): Promise<string | null>;
-  set(deviceId: string, password: string): Promise<void>;
-  forget(deviceId: string): Promise<void>;
+  get(key: string): Promise<string | null>;
+  set(key: string, password: string): Promise<void>;
+  forget(key: string): Promise<void>;
 }
 
 /** idle: never connected. locked: connected, no session. closed: the connection ended. */
@@ -244,7 +251,7 @@ export class AppStore {
     }
     if (options.remember) {
       // Unlocking still counts if the Keychain refuses; the user just types it again next time.
-      await this.vault.set(id, password).catch((err: unknown) => {
+      await this.vault.set(this.vaultKey(id), password).catch((err: unknown) => {
         if (typeof __DEV__ !== "undefined" && __DEV__) console.warn(`[vault] couldn't save the password: ${errorMessage(err)}`);
       });
     }
@@ -256,14 +263,15 @@ export class AppStore {
    * has been forgotten. Other errors (rate limiting, connection) are thrown.
    */
   async unlockWithSaved(id: string): Promise<"unlocked" | "none" | "failed"> {
-    const saved = await this.vault.get(id).catch(() => null);
+    const key = this.vaultKey(id);
+    const saved = await this.vault.get(key).catch(() => null);
     if (!saved) return "none";
     try {
       await this.unlock(id, saved);
       return "unlocked";
     } catch (err) {
       if (isLinkError(err, "auth_failed")) {
-        await this.vault.forget(id).catch(() => undefined);
+        await this.vault.forget(key).catch(() => undefined);
         return "failed";
       }
       throw err;
@@ -271,18 +279,34 @@ export class AppStore {
   }
 
   hasSavedPassword(id: string): Promise<boolean> {
-    return this.vault.get(id).then(
+    return this.vault.get(this.vaultKey(id)).then(
       (p) => p !== null,
       () => false,
     );
   }
 
   forgetPassword(id: string): Promise<void> {
-    return this.vault.forget(id);
+    return this.vault.forget(this.vaultKey(id));
   }
 
   rememberPassword(id: string, password: string): Promise<void> {
-    return this.vault.set(id, password);
+    return this.vault.set(this.vaultKey(id), password);
+  }
+
+  /**
+   * Where a device's password is saved: its id plus its name (as UTF-8 hex, which the Keychain
+   * key allows). The id alone isn't enough: iOS derives it from the Bluetooth chip's address,
+   * so a Pi re-flashed as a different device keeps the old id. Just the id when no name is
+   * known yet.
+   */
+  private vaultKey(id: string, name = this.deviceName(id)): string {
+    if (!name) return id;
+    return `${id}.${bytesToHex(utf8(name))}`;
+  }
+
+  /** The name the device advertises (kept up to date by `seen` and `renamed`), else `info`'s. */
+  private deviceName(id: string): string | undefined {
+    return this.state.devices[id]?.name || this.session(id).info?.name || undefined;
   }
 
   async disconnect(id: string): Promise<void> {
@@ -395,12 +419,26 @@ export class AppStore {
     return this.apply(id, Object.fromEntries(saved.map((key) => [key, null])));
   }
 
-  /** After `access.setName`: the device re-advertises under the new name. */
-  renamed(id: string, name: string): void {
+  /**
+   * After `access.setName`: the device re-advertises under the new name. A saved password moves
+   * to the new name, since it's still the same device.
+   */
+  async renamed(id: string, name: string): Promise<void> {
+    const oldKey = this.vaultKey(id);
     const s = this.session(id);
     if (s.info) this.patchSession(id, { info: { ...s.info, name } });
     const device = this.state.devices[id];
     if (device) this.update({ devices: { ...this.state.devices, [id]: { ...device, name } } });
+    const newKey = this.vaultKey(id, name);
+    if (newKey === oldKey) return;
+    try {
+      const saved = await this.vault.get(oldKey);
+      if (saved === null) return;
+      await this.vault.set(newKey, saved);
+      await this.vault.forget(oldKey);
+    } catch (err) {
+      if (typeof __DEV__ !== "undefined" && __DEV__) console.warn(`[vault] couldn't move the saved password: ${errorMessage(err)}`);
+    }
   }
 }
 

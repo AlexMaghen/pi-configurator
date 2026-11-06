@@ -2,8 +2,9 @@
  * Saved device passwords (iOS Keychain / Android Keystore through expo-secure-store) and the
  * app's few preferences.
  *
- * Keys are per device id. SecureStore keys allow only letters, digits, ".", "-" and "_", which
- * covers ble-plx ids (UUIDs on iOS, MAC addresses on Android after the ":" are replaced).
+ * Password keys come from AppStore (device id plus hex-encoded name). SecureStore keys allow
+ * only letters, digits, ".", "-" and "_", which covers those (and ble-plx ids: UUIDs on iOS,
+ * MAC addresses on Android after the ":" are replaced).
  */
 import * as SecureStore from "expo-secure-store";
 
@@ -15,10 +16,10 @@ const PASSWORD_OPTIONS: SecureStore.SecureStoreOptions = {
 };
 
 export const savedPasswords = {
-  get: (deviceId: string) => SecureStore.getItemAsync(keyFor("pw", deviceId), PASSWORD_OPTIONS),
-  set: (deviceId: string, password: string) =>
-    SecureStore.setItemAsync(keyFor("pw", deviceId), password, PASSWORD_OPTIONS),
-  forget: (deviceId: string) => SecureStore.deleteItemAsync(keyFor("pw", deviceId), PASSWORD_OPTIONS),
+  get: (key: string) => SecureStore.getItemAsync(keyFor("pw", key), PASSWORD_OPTIONS),
+  set: (key: string, password: string) =>
+    SecureStore.setItemAsync(keyFor("pw", key), password, PASSWORD_OPTIONS),
+  forget: (key: string) => SecureStore.deleteItemAsync(keyFor("pw", key), PASSWORD_OPTIONS),
 };
 
 /** App preferences. Not secret, but SecureStore saves adding another storage library. */
