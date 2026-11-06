@@ -83,6 +83,16 @@ pnpm --filter build-pifig-sd build
 compiles `src/` with Bun into self-contained programs in `dist/`, with the bundle inside, so
 they need nothing installed and no internet.
 
+Or let `scripts/pifig-sd.sh` at the repo root decide: it fingerprints the inputs of each step
+(the files' contents, committed or not), rebuilds only the steps whose inputs changed, and then
+runs the program for this Mac on the inserted card. It leaves the fingerprints as
+`.inputs-sha256` in `bundle/` and `dist/`; a build made with the commands above has none, so the
+script rebuilds it once.
+
+```bash
+~/AxDevProj/Robots/pi-configurator/scripts/pifig-sd.sh [--config-file PATH]
+```
+
 During development, run it straight from the source:
 
 ```bash

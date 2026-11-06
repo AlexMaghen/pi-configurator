@@ -30,6 +30,15 @@ already running.
 
 The card must not have been started in a Pi before: the install runs on the very first boot.
 
+On the Mac that has this repo, step 2 is one command, from any folder:
+
+```bash
+~/AxDevProj/Robots/pi-configurator/scripts/pifig-sd.sh --config-file PATH
+```
+
+It rebuilds build-pifig-sd first when the code it carries has changed (the bundle with Docker
+when the Pi side changed), then runs it. `--config-file` is optional and is its only option.
+
 ### On a running Raspberry Pi
 
 Needs Raspberry Pi OS Trixie (Pi 4B, Pi 5, Zero 2 W) with Bluetooth. On the Pi's command line,
@@ -307,6 +316,7 @@ programs read settings and hear about changes:
 | `apps/mobile` | Expo app "pi-fig" (iPhone and iPad first, Android-ready) |
 | `deploy/` | One-line installer (`get.sh`), install script and systemd unit for the Pi |
 | `apps/build-pifig-sd` | Command-line tool for Mac and Windows that sets up a Raspberry Pi OS SD card so the Pi installs pi-configurator on first boot, offline |
+| `scripts/pifig-sd.sh` | On the Mac with this repo: rebuilds build-pifig-sd when needed and runs it on the inserted card (logic in `pifig-sd.ts`) |
 | `config-template/config.json` | The config file template (set up for BallsPi, the first target device); also the demo device in the app |
 | `store/` | App Store and Google Play icons, screenshots and listing text |
 
