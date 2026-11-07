@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "bluetooth": {
+    "name": "ThingThing"
+  },
+  "access": {
+    "password": "1234"
+  },
+  "deviceDescription": "ThingThing pi",
+  "export": {
+    "envFile": "/var/lib/pi-configurator/ThingThing.env"
+  },
+  "deviceSettings": {
+    "wifi": true,
+    "hostname": {
+      "label": "Device hostname",
+      "default": "ThingThing"
+    },
+    "timezone": {
+      "default": "America/Los_Angeles"
+    },
+    "allowReboot": true,
+    "allowAccessChanges": false
+  },
+  "appSettings": [
+    {
+      "groupName": "Testicles",
+      "items": [
+        {
+          "key": "Testicle_Count",
+          "label": "Testicle_Count",
+          "type": "number",
+          "min": 0,
+          "max": 25,
+          "default": 2
+        }
+      ]
+    }
+  ]
+}
