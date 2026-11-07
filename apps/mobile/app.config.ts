@@ -19,7 +19,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   name: "pi-fig",
   slug: "pi-configurator",
   scheme: "piconfigurator",
-  version: "0.1.0",
+  version: "2",
   orientation: "portrait",
   icon: "./assets/icon.png",
   userInterfaceStyle: "automatic",
@@ -28,7 +28,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // The owner's Apple Developer team, so Xcode signs with it automatically.
     appleTeamId: "4Z3U3P6Q63",
     // Raise for every upload to App Store Connect (TestFlight refuses a repeated build number).
-    buildNumber: "10",
+    buildNumber: "11",
     supportsTablet: true,
     infoPlist: {
       NSBluetoothAlwaysUsageDescription: BLUETOOTH_REASON,
@@ -49,7 +49,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   android: {
     package: APP_ID,
     // Raise for every upload to Google Play.
-    versionCode: 10,
+    versionCode: 11,
     adaptiveIcon: {
       backgroundColor: "#FFFFFF",
       foregroundImage: "./assets/android-icon-foreground.png",
