@@ -141,9 +141,24 @@ in [config.json Structure and Options](#configjson-structure-and-options).
 
 ### On the phone
 
-Install **pi-fig** from the App Store (Google Play to follow). Open it near the Pi, tap the
-device, and enter its access password. To try the app without a Pi, turn on the demo device in
-its Preferences.
+Install **pi-fig** for iPhone and iPad from the App Store:
+[apps.apple.com/us/app/pi-fig/id6829856521](https://apps.apple.com/us/app/pi-fig/id6829856521)
+(Google Play to follow). Open it near the Pi, tap the device, and enter its access password. To
+try the app without a Pi, turn on the demo device in its Preferences.
+
+The app's source is in [`apps/mobile`](apps/mobile): one Expo (React Native) codebase for iOS
+and Android. The screens are under `apps/mobile/src/app`, and the Bluetooth, encryption and
+session code under `apps/mobile/src/lib`. You can use it in two ways:
+
+- **As-is.** pi-fig is generic: it draws every device's settings from that device's
+  `config.json`, so you can set up your own Pi product with no app changes. The settings, their
+  labels, help text, groups and defaults, and which device screens appear (Wi-Fi, hostname, time
+  zone, password changes) all come from the config file (see
+  [config.json Structure and Options](#configjson-structure-and-options)).
+- **As a starting point for your own product.** Fork the repo and adapt `apps/mobile` into an
+  app built for one IoT product: your own name and branding, screens made for that device, or
+  extra features beyond settings. The shared contract in `packages/protocol` and the service on
+  the Pi keep working underneath.
 
 ## config.json Structure and Options
 
