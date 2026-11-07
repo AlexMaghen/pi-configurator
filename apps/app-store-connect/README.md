@@ -16,8 +16,9 @@ pnpm --filter app-store-connect push
 `push` sends the listing to the version being prepared:
 - App Information: name, subtitle, privacy URL, categories, and the age rating with "no" to
   every question;
-- the version: description, keywords, promotional text, support URL, copyright, manual
-  release, and the newest processed build;
+- the version: description, keywords, promotional text, What's New (from `whats_new.txt`,
+  if there is one: App Store Connect refuses it on an app's first version), support URL,
+  copyright, manual release, and the newest processed build;
 - the App Review notes, with no sign-in required;
 - screenshots, but only into sets that are still empty;
 - the newest build's What to Test;

@@ -11,6 +11,7 @@ export const METADATA_FILES = [
   "description",
   "keywords",
   "promotional_text",
+  "whats_new",
   "support_url",
   "marketing_url",
   "privacy_url",

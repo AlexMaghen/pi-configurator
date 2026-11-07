@@ -1,0 +1,3 @@
+- Reset All to Defaults: a new button above Reboot puts every app setting back to the device's default in one step, after you confirm.
+- Remembered passwords now belong to the device's name as well as its Bluetooth chip. A Pi that's set up again under a new name asks for its password instead of trying the old one. Renaming a device from the app keeps its saved password. Passwords saved by the previous version need to be typed once more.
+- Works with pi-configurator 0.2.1 on the Pi, which turns the Pi's Wi-Fi radio on if it's off, so a Pi set up without Wi-Fi now lists nearby networks.

@@ -156,10 +156,12 @@ export async function pushListing(asc: AppStoreConnect, local: LocalListing, opt
         promotionalText: m.promotional_text,
         supportUrl: m.support_url,
         ...(m.marketing_url ? { marketingUrl: m.marketing_url } : {}),
+        // Only for updates: App Store Connect refuses What's New on an app's first version.
+        ...(m.whats_new ? { whatsNew: m.whats_new } : {}),
       },
     },
   });
-  log(`Version ${versionName}: description, keywords, promotional text, support URL`);
+  log(`Version ${versionName}: description, keywords, promotional text, support URL${m.whats_new ? ", What's New" : ""}`);
 
   const review = await asc.one(`/v1/appStoreVersions/${version.id}/appStoreReviewDetail`).catch(() => null);
   const c = opts.contact;

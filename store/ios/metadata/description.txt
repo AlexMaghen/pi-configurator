@@ -15,6 +15,7 @@ Each device has its own access password. pi-fig proves it knows the password wit
 EVERYTHING ELSE
 - Live progress while changes are applied
 - Device Data: hardware, operating system, Wi-Fi and Bluetooth details, ready to copy
+- Reset All to Defaults: put every app setting back to the device's default in one step
 - Reboot the Pi from your phone, if the device allows it
 - Change the device's password or Bluetooth name, if the device allows it
 - Light and dark mode

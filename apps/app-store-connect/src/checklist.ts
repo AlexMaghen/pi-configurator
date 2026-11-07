@@ -123,6 +123,16 @@ export function checklist(snap: Snapshot, local: LocalListing): Item[] {
     items.push(compare("Version", "Description", loc?.description, m("description")));
     items.push(compare("Version", "Keywords", loc?.keywords, m("keywords")));
     items.push(compare("Version", "Promotional text", loc?.promotionalText, m("promotional_text")));
+    items.push(
+      m("whats_new")
+        ? compare("Version", "What's New", loc?.whatsNew, m("whats_new"))
+        : {
+            section: "Version",
+            label: "What's New",
+            status: "info",
+            detail: "no whats_new.txt: needed for every version after the first",
+          },
+    );
     items.push(compare("Version", "Support URL", loc?.supportUrl, m("support_url")));
     if (m("marketing_url")) items.push(compare("Version", "Marketing URL", loc?.marketingUrl, m("marketing_url")));
     items.push(compare("Version", "Copyright", v.copyright, m("copyright")));

@@ -14,6 +14,7 @@ needs only the build; the rest is for the store listing.
 | `ios/metadata/subtitle.txt` | 30 | Subtitle |
 | `ios/metadata/promotional_text.txt` | 170 | Promotional text (can change without a new build) |
 | `ios/metadata/description.txt` | 4,000 | Description |
+| `ios/metadata/whats_new.txt` | 4,000 | What's New in This Version (every version after the first; rewrite it for each one) |
 | `ios/metadata/keywords.txt` | 100, comma-separated | Keywords |
 | `ios/metadata/primary_category.txt`, `secondary_category.txt` | | Category |
 | `ios/metadata/copyright.txt` | | Copyright |
