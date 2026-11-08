@@ -1,20 +1,20 @@
 {
   "version": 1,
   "bluetooth": {
-    "name": "BallsPi"
+    "name": "SampleDevice"
   },
   "access": {
     "password": "1234"
   },
-  "deviceDescription": "Runs the StuDfs HomeKit accessories: Balls, with its door and track, and PlayStream. Wi-Fi, hostname and time zone are under Device & Network; the accessories' own settings are under Application Settings.",
+  "deviceDescription": "SampleDevice pi",
   "export": {
-    "envFile": "/var/lib/pi-configurator/ballspi.env"
+    "envFile": "/var/lib/pi-configurator/SampleDevice.env"
   },
   "deviceSettings": {
     "wifi": true,
     "hostname": {
       "label": "Device hostname",
-      "default": "ballspi"
+      "default": "SampleDevice"
     },
     "timezone": {
       "default": "America/Los_Angeles"
@@ -24,127 +24,66 @@
   },
   "appSettings": [
     {
-      "groupName": "Balls",
-      "onChange": {
-        "restart": [
-          "balls.service"
-        ]
-      },
+      "groupName": "Sample Service",
       "items": [
         {
-          "key": "BALLS_NAME",
-          "label": "HomeKit name",
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 64,
-          "default": "Ballsey"
-        },
-        {
-          "key": "BALLS_OPEN_DOOR_LEAD_SECONDS",
-          "label": "Door lead time (open)",
-          "type": "number",
-          "min": 0,
-          "max": 60,
-          "step": 0.5,
-          "unit": "s",
-          "default": 5
-        },
-        {
-          "key": "BALLS_OPEN_FINISH_SECONDS",
-          "label": "Open finish time",
-          "type": "number",
-          "min": 0,
-          "max": 120,
-          "step": 0.5,
-          "unit": "s",
-          "default": 20
-        },
-        {
-          "key": "BALLS_CLOSE_TRACK_LEAD_SECONDS",
-          "label": "Track lead time (close)",
-          "type": "number",
-          "min": 0,
-          "max": 60,
-          "step": 0.5,
-          "unit": "s",
-          "default": 4
-        },
-        {
-          "key": "BALLS_CLOSE_FINISH_SECONDS",
-          "label": "Close finish time",
-          "type": "number",
-          "min": 0,
-          "max": 120,
-          "step": 0.5,
-          "unit": "s",
-          "default": 20
-        },
-        {
-          "key": "BALLS_HOME_ON_START",
-          "label": "Home on start",
-          "help": "Move the mechanism to its home position when the service starts.",
-          "type": "boolean",
-          "default": true
-        }
-      ]
-    },
-    {
-      "groupName": "PlayStream",
-      "onChange": {
-        "restart": [
-          "playstream.service"
-        ]
-      },
-      "items": [
-        {
-          "key": "PLAYSTREAM_NAME",
-          "label": "HomeKit name",
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 64,
-          "default": "PlayStream"
-        },
-        {
-          "key": "PLAYSTREAM_STREAM_URL",
-          "label": "Stream URL",
-          "type": "string",
-          "format": "url",
-          "default": "http://streaming.live365.com/a21442"
-        }
-      ]
-    },
-    {
-      "groupName": "Advanced",
-      "onChange": {
-        "restart": [
-          "balls.service",
-          "playstream.service"
-        ]
-      },
-      "items": [
-        {
-          "key": "HK_LOG_LEVEL",
-          "label": "Log level",
+          "key": "color",
+          "label": "Light color",
           "type": "select",
           "options": [
             {
-              "value": "DEBUG",
-              "label": "Debug"
+              "value": "warm-white",
+              "label": "Warm white"
             },
             {
-              "value": "INFO",
-              "label": "Info"
+              "value": "cool-white",
+              "label": "Cool white"
             },
             {
-              "value": "WARNING",
-              "label": "Warning"
+              "value": "red",
+              "label": "Red"
             },
             {
-              "value": "ERROR",
-              "label": "Error"
+              "value": "green",
+              "label": "Green"
+            },
+            {
+              "value": "blue",
+              "label": "Blue"
+            },
+            {
+              "value": "purple",
+              "label": "Purple"
             }
           ],
-          "default": "INFO"
+          "default": "warm-white",
+          "help": "The color of the device's light"
+        },
+        {
+          "key": "volume",
+          "label": "Volume",
+          "type": "integer",
+          "min": 0,
+          "max": 100,
+          "step": 5,
+          "unit": "%",
+          "default": 40,
+          "help": "Speaker volume. 0 is muted"
+        },
+        {
+          "key": "autostart",
+          "label": "Start playing at boot",
+          "type": "boolean",
+          "default": true,
+          "help": "Used when the service starts, so a change takes effect at the next boot"
+        },
+        {
+          "key": "artistName",
+          "label": "Artist name",
+          "type": "string",
+          "maxLength": 60,
+          "default": "",
+          "help": "Shown on the device's display. Leave blank to hide it"
         }
       ]
     }

@@ -56,7 +56,7 @@ The installer:
 3. copies the config template to `/etc/pi-configurator/config.json`;
 4. asks for the **Bluetooth name** the phone will show and the **access password** the app
    unlocks it with. Press Enter to keep each as it is in the config (the template's are
-   `BallsPi` and `1234`); a new password needs at least 8 characters.
+   `SampleDevice` and `1234`); a new password needs at least 8 characters.
 
 When it finishes, the Pi is advertising over Bluetooth and pi-fig can find it.
 
@@ -314,6 +314,49 @@ group's `onChange`), and only reloaded when the log level changes (the item's ow
 programs read settings and hear about changes:
 [deploy/README.md](deploy/README.md#reading-settings-from-another-program).
 
+## Sample Service: Using the Settings in Your Own Program
+
+[samples/sample-service](samples/sample-service) is a complete example of a program on the Pi
+that gets its settings from pi-configurator. Use it to see the whole loop working, or copy it as
+the starting point for your own service. It drives a pretend light, speaker and display (it only
+logs what each would do), and reads the four settings in the **Sample Service** group of
+[config-template/config.json](config-template/config.json), one of each kind:
+
+| Setting in the app | Key | Type | Applied |
+|---|---|---|---|
+| Light color | `color` | `select` | at once |
+| Volume | `volume` | `integer`, 0 to 100 % in steps of 5 | at once |
+| Start playing at boot | `autostart` | `boolean` | at the next start |
+| Artist name | `artistName` | `string`, up to 60 characters | at once |
+
+What it shows:
+
+- **Reading:** all settings go into one typed, immutable `Settings` object through
+  `pi-configurator-client`'s typed getters. Each is the value saved from the phone, else the
+  config file's `default`, else a built-in fallback, so the program always starts.
+- **Hearing changes:** `store.on_change` runs on the client's background thread, so its listener
+  only queues a note. The main thread re-reads the settings, compares them with the last ones and
+  applies only what changed, so the device code never runs on two threads at once.
+- **Live and at-start settings:** color, volume and artist name apply the moment they're saved;
+  autostart only matters when the service starts, so it's used at the next start.
+- **Running as a service:** a systemd unit whose user is in the `pi-configurator` group (needed
+  to read the settings), SIGHUP to reload (`systemctl reload`), and a clean stop on SIGTERM.
+- **Robustness:** a value the code doesn't expect falls back to its default with a warning; an
+  unreadable store keeps the last good settings. Its tests check that the code's keys, types,
+  options and defaults match the template.
+
+Try it on a Mac by pointing it at any `values.json` and editing that file while it runs
+(`uv run sample-service --store /tmp/values.json` in `samples/sample-service`). On a Pi that
+runs pi-configurator, install it with:
+
+```bash
+sudo samples/sample-service/deploy/install.sh
+```
+
+Then change its settings in pi-fig and follow them with `journalctl -u sample-service -f`. The
+steps, and how your own project depends on the client:
+[samples/sample-service/README.md](samples/sample-service/README.md).
+
 ## Documentation
 
 - **Design:** [docs/design.md](docs/design.md). Background research: [docs/background.md](docs/background.md).
@@ -332,7 +375,8 @@ programs read settings and hear about changes:
 | `deploy/` | One-line installer (`get.sh`), install script and systemd unit for the Pi |
 | `apps/build-pifig-sd` | Command-line tool for Mac and Windows that sets up a Raspberry Pi OS SD card so the Pi installs pi-configurator on first boot, offline |
 | `scripts/pifig-sd.sh` | On the Mac with this repo: rebuilds build-pifig-sd when needed and runs it on the inserted card (logic in `pifig-sd.ts`) |
-| `config-template/config.json` | The config file template (set up for BallsPi, the first target device); also the demo device in the app |
+| `config-template/config.json` | The config file template, for a sample device whose settings `samples/sample-service` reads; also the demo device in the app |
+| `samples/sample-service` | Example Python program on the Pi that reads its settings from pi-configurator and applies changes live (its own uv project) |
 | `store/` | App Store and Google Play icons, screenshots and listing text |
 
 ### Commands

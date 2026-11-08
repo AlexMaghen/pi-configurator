@@ -1,0 +1,11 @@
+{
+  "name": "@pi-configurator/sample-service",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Python sample program that reads its settings from pi-configurator (a uv project). Wrapped so turbo runs its tasks.",
+  "scripts": {
+    "test": "uv run --frozen pytest",
+    "typecheck": "uv run --frozen pyright",
+    "lint": "uv run --frozen ruff check . && uv run --frozen ruff format --check ."
+  }
+}

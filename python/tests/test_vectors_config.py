@@ -63,11 +63,13 @@ def test_value_cases(case: dict[str, Any]) -> None:
 
 def test_example_config_is_valid() -> None:
     config = load_config_file(CONFIG_TEMPLATE)
-    assert config.name == "BallsPi"
+    assert config.name == "SampleDevice"
     assert config.permissions.allow_reboot
     assert config.system == ["wifi", "hostname", "timezone"]
-    assert config.system_default("hostname") == "ballspi"
-    assert config.on_change["BALLS_NAME"] is not None  # from its group
+    assert config.system_default("hostname") == "SampleDevice"
+    # One item of each kind samples/sample-service reads; none restarts a unit (it listens).
+    assert [f.type for f in config.fields] == ["select", "integer", "boolean", "string"]
+    assert config.on_change["volume"] is None
 
 
 def test_generated_aliases_match_types() -> None:

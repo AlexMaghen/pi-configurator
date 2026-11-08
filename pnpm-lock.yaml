@@ -159,6 +159,8 @@ importers:
         specifier: workspace:*
         version: link:../packages/protocol
 
+  samples/sample-service: {}
+
 packages:
 
   2g@1.0.1:

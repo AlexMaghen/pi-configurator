@@ -6,7 +6,7 @@
 import { describe, expect, it } from "vitest";
 import { AUTH_BACKOFF, validateValue, type StatusEvent } from "@pi-configurator/protocol";
 import { LinkError } from "../src/lib/link/errors";
-import { DEMO_PASSWORD, SECRET_FIELD, makePi, openLink, pick, restartsOf, testConfig, unlockedLink } from "./support";
+import { DEMO_HOSTNAME, DEMO_NAME, DEMO_PASSWORD, SECRET_FIELD, makePi, openLink, pick, restartsOf, testConfig, unlockedLink } from "./support";
 
 const num = pick.number();
 const url = pick.url();
@@ -27,7 +27,7 @@ describe("handshake", () => {
   it("reads info and unlocks with the right password", async () => {
     const { pi, clock } = makePi();
     const link = await openLink(pi, clock);
-    expect(link.info).toMatchObject({ protocol: 1, name: "BallsPi", model: "Test Pi" });
+    expect(link.info).toMatchObject({ protocol: 1, name: DEMO_NAME, model: "Test Pi" });
     expect(link.state).toBe("locked");
     const steps: string[] = [];
     const { idleTimeoutS } = await link.unlock(DEMO_PASSWORD, (s) => steps.push(s));
@@ -116,7 +116,7 @@ describe("settings", () => {
     expect(values[num.key]).toEqual({ secret: false, value: num.default, source: "default" });
     // A secret with a config default counts as set, without revealing it.
     expect(values[SECRET_FIELD.key]).toEqual({ secret: true, set: true, source: "default" });
-    expect(values[pick.hostname().key]).toMatchObject({ value: "ballspi", source: "system" });
+    expect(values[pick.hostname().key]).toMatchObject({ value: DEMO_HOSTNAME, source: "system" });
     expect(values[pick.wifi().key]).toMatchObject({ value: { ssid: "HomeNet", connected: true }, source: "system" });
     const some = await link.call("settings.get", { keys: [pick.hostname().key] });
     expect(Object.keys(some.values)).toEqual([pick.hostname().key]);
@@ -157,7 +157,7 @@ describe("settings", () => {
     );
     expect(err.details).toEqual({ [num.key]: validateValue(num, tooSmall), [url.key]: "Must be a URL" });
     const { values } = await link.call("settings.get", { keys: [pick.hostname().key] });
-    expect(values[pick.hostname().key]).toMatchObject({ value: "ballspi" });
+    expect(values[pick.hostname().key]).toMatchObject({ value: DEMO_HOSTNAME });
   });
 
   it("refuses to reset a system field", async () => {
@@ -219,10 +219,10 @@ describe("permissions and access", () => {
   it("changes the password and name when allowed", async () => {
     const { pi, clock, link } = await unlockedLink({ permissions: { allowAccessChanges: true } });
     await link.call("access.setPassword", { password: "brand-new-pass" });
-    await link.call("access.setName", { name: "BallsPi 2" });
+    await link.call("access.setName", { name: `${DEMO_NAME} 2` });
     await link.close();
     const next = await openLink(pi, clock);
-    expect(next.info.name).toBe("BallsPi 2");
+    expect(next.info.name).toBe(`${DEMO_NAME} 2`);
     await expectLinkError(next.unlock(DEMO_PASSWORD), "auth_failed");
     await next.unlock("brand-new-pass");
     expect(next.state).toBe("unlocked");

@@ -1,0 +1,28 @@
+# sample-service: the pi-configurator sample program. Installed by install.sh (next to this file)
+# to /etc/systemd/system/. Logs: journalctl -u sample-service -f
+#
+# What a program that reads pi-configurator settings needs from its unit:
+# - membership of the pi-configurator group, to read /var/lib/pi-configurator/values.json
+#   (here through SupplementaryGroups; a unit with its own User= can instead be added with
+#   `sudo deploy/install.sh --reader <user>` from the repo root);
+# - ExecReload, so `systemctl reload` (and "onChange": {"reload": [...]} in the config file)
+#   asks it to re-read its settings.
+
+[Unit]
+Description=pi-configurator sample service
+Documentation=https://github.com/AlexMaghen/pi-configurator/tree/main/samples/sample-service
+After=pi-configurator.service
+
+[Service]
+Type=simple
+ExecStart=/opt/sample-service/venv/bin/sample-service
+ExecReload=/bin/kill -HUP $MAINPID
+Environment=PYTHONUNBUFFERED=1
+# A throwaway user made at start, added to the group that may read the settings.
+DynamicUser=yes
+SupplementaryGroups=pi-configurator
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

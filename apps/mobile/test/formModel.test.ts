@@ -17,7 +17,7 @@ import {
 import { detailsText } from "../src/lib/format/details";
 import { formatNumber, parseNumber, percentBars, rssiBars } from "../src/lib/format/numbers";
 import { deviceTabs } from "../src/lib/form/tabs";
-import { SECRET_FIELD, pick, testConfig, testFields } from "./support";
+import { DEMO_HOSTNAME, SECRET_FIELD, pick, testConfig, testFields } from "./support";
 
 const fields = testFields();
 const num = pick.number();
@@ -129,13 +129,13 @@ describe("drafts", () => {
     const d = num.default!;
     const values: Record<string, ValueState> = {
       [num.key]: plain(d, "default"),
-      [hostname.key]: plain("ballspi", "system"),
+      [hostname.key]: plain(DEMO_HOSTNAME, "system"),
       [timezone.key]: plain("America/Los_Angeles", "system"),
       [url.key]: plain("", "default"),
     };
     const pending = pendingChanges(fields, values, {
       [num.key]: { kind: "text", text: String(d + num.step!) },
-      [hostname.key]: { kind: "text", text: "ballspi" },
+      [hostname.key]: { kind: "text", text: DEMO_HOSTNAME },
       [timezone.key]: { kind: "value", value: "Europe/Paris" },
       [url.key]: { kind: "text", text: "not a url" },
     });

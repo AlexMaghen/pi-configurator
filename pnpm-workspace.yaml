@@ -1,9 +1,11 @@
 # JavaScript/TypeScript workspaces. The Python side lives in python/ as a uv workspace and is
-# wired into turbo through python/package.json.
+# wired into turbo through python/package.json; each sample in samples/ (its own uv project) is
+# wired in the same way.
 packages:
   - "apps/*"
   - "packages/*"
   - "python"
+  - "samples/*"
 
 # Expo/Metro resolves native modules most reliably from a hoisted node_modules.
 nodeLinker: hoisted

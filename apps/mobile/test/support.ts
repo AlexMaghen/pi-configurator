@@ -27,8 +27,10 @@ export class Clock {
 export const NO_DELAYS = { frame: 0, wifiScan: 0, wifiJoin: 0, restart: 0, rebootDrop: 20, rebootDown: 1000 };
 
 /**
- * The example file has no secret field, so tests add a group with one to cover "set / not set"
- * and replace-only behavior. Everything else comes from config-template/config.json.
+ * Tests add a group of fields the example file may not have: a secret one, to cover "set / not
+ * set" and replace-only behavior, a URL one for format checks, and a decimal number with bounds
+ * and a step whose group restarts a unit. Everything else comes from
+ * config-template/config.json, so the tests don't depend on which sample settings it holds.
  */
 export const SECRET_FIELD: SettingItem = {
   key: "TEST_API_KEY",
@@ -37,12 +39,35 @@ export const SECRET_FIELD: SettingItem = {
   secret: true,
   default: "hidden-default",
 };
+export const URL_FIELD: SettingItem = {
+  key: "TEST_WEBHOOK_URL",
+  label: "Webhook URL",
+  type: "string",
+  format: "url",
+  default: "",
+};
+export const NUMBER_FIELD: SettingItem = {
+  key: "TEST_DELAY_SECONDS",
+  label: "Delay",
+  type: "number",
+  min: 0,
+  max: 60,
+  step: 0.5,
+  unit: "s",
+  default: 5,
+};
 export const SECRET_GROUP: SettingGroup = {
   groupName: "Test",
   help: "Only in the tests.",
   onChange: { restart: ["test.service"] },
-  items: [SECRET_FIELD],
+  items: [NUMBER_FIELD, SECRET_FIELD, URL_FIELD],
 };
+
+/** The example file's Bluetooth name, and the hostname the demo Pi starts with. */
+export const DEMO_NAME = demoConfig().bluetooth.name;
+const hostnameSetting = demoConfig().deviceSettings?.hostname;
+export const DEMO_HOSTNAME =
+  (typeof hostnameSetting === "object" ? hostnameSetting.default : undefined) ?? "raspberrypi";
 
 export function testConfig(deviceSettings?: Partial<DeviceSettings>): Config {
   const config = demoConfig(deviceSettings);
@@ -65,20 +90,20 @@ export function restartsOf(key: string): string[] {
 }
 
 /** Fields of the example file, picked by what a test needs rather than by key. */
-const fileItems = () => appItems(demoConfig().appSettings);
 const fileFields = () => deviceFields(demoConfig().deviceSettings);
 export const pick = {
-  /** A number item with min, max and step. */
+  /** A decimal number item with min, max and step, whose change restarts a unit. */
   number: () => {
-    const f = fileItems().find(
-      (x) => (x.type === "number" || x.type === "integer") && x.min !== undefined && x.max !== undefined && x.step !== undefined,
+    const f = appItems(testConfig().appSettings).find(
+      (x) => x.type === "number" && x.min !== undefined && x.max !== undefined && x.step !== undefined,
     );
-    if (!f || (f.type !== "number" && f.type !== "integer")) throw new Error("example has no bounded number field");
+    if (!f || f.type !== "number") throw new Error("no bounded number field");
     return f;
   },
+  /** A string item with `format: "url"` (the tests' own, if the example file has none). */
   url: () => {
-    const f = fileItems().find((x) => x.type === "string" && x.format === "url");
-    if (!f || f.type !== "string") throw new Error("example has no URL field");
+    const f = appItems(testConfig().appSettings).find((x) => x.type === "string" && x.format === "url");
+    if (!f || f.type !== "string") throw new Error("no URL field");
     return f;
   },
   hostname: () => fileFields().find((x) => x.key === "hostname")!,

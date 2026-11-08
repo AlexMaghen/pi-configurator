@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { AppStore, type AppTransport, type PasswordVault } from "../src/lib/session/AppStore";
 import type { DeviceTransport, DiscoveredDevice } from "../src/lib/transport/types";
-import { DEMO_PASSWORD, makePi, pick, restartsOf, randomBytes, testFields } from "./support";
+import { DEMO_HOSTNAME, DEMO_NAME, DEMO_PASSWORD, makePi, pick, restartsOf, randomBytes, testFields } from "./support";
 
 const num = pick.number();
 const next = num.default! + num.step!;
@@ -57,7 +57,7 @@ describe("AppStore", () => {
     const { store } = setup();
     await store.unlock("d1", DEMO_PASSWORD);
     store.setDraft("d1", num.key, { kind: "text", text: String(next) });
-    store.setDraft("d1", pick.hostname().key, { kind: "text", text: "ballspi" }); // unchanged
+    store.setDraft("d1", pick.hostname().key, { kind: "text", text: DEMO_HOSTNAME }); // unchanged
     const outcome = await store.save("d1");
     expect(outcome.saved).toEqual([num.key]);
     expect(outcome.restarted).toEqual(restartsOf(num.key));
@@ -133,7 +133,7 @@ describe("AppStore", () => {
 
   it("keeps the saved password when the device is renamed from the app", async () => {
     const { store, saved, seenAs } = setup();
-    seenAs("BallsPi");
+    seenAs(DEMO_NAME);
     await store.unlock("d1", DEMO_PASSWORD, { remember: true });
     await store.renamed("d1", "Garage");
     expect(saved.size).toBe(1);

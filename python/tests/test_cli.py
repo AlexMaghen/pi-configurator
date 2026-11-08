@@ -22,7 +22,7 @@ PYTHON_ROOT = Path(__file__).resolve().parents[1]
 
 def test_check_example(capsys: pytest.CaptureFixture[str]) -> None:
     assert main(["check", str(CONFIG_TEMPLATE)]) == 0
-    assert "OK (9 app settings in 3 groups, 3 device settings" in capsys.readouterr().out
+    assert "OK (4 app settings in 1 group, 3 device settings" in capsys.readouterr().out
 
 
 def test_check_reports_codes(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -142,7 +142,8 @@ def test_set_access_name_and_password(
     data = json.loads(path.read_text())
     assert data["bluetooth"]["name"] == "Kitchen Pi"
     assert data["access"]["password"] == "a-new-password"
-    assert len(data["appSettings"]) == 3  # the rest of the file is kept
+    template = json.loads(CONFIG_TEMPLATE.read_text())
+    assert data["appSettings"] == template["appSettings"]  # the rest of the file is kept
     assert "saved" in capsys.readouterr().out
 
 
@@ -160,7 +161,7 @@ def test_set_access_interactive(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
     monkeypatch.setattr("getpass.getpass", next_password)
     assert main(["set-access", str(path)]) == 0
     data = json.loads(path.read_text())
-    assert data["bluetooth"]["name"] == "BallsPi"
+    assert data["bluetooth"]["name"] == json.loads(CONFIG_TEMPLATE.read_text())["bluetooth"]["name"]
     assert data["access"]["password"] == "long-enough-1"
 
 

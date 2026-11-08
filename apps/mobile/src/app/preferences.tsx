@@ -19,7 +19,7 @@ export default function PreferencesScreen() {
     <Screen>
       <Section
         title="Demo"
-        footer="Adds a pretend BallsPi to the device list. It runs inside the app and needs no Bluetooth, so you can try every screen without a Raspberry Pi."
+        footer="Adds a pretend sample device to the device list. It runs inside the app and needs no Bluetooth, so you can try every screen without a Raspberry Pi."
       >
         <ListRow
           title="Show demo device"
